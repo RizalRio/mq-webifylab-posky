@@ -1,0 +1,12 @@
+# Task Queue & Redis
+celery
+redis
+
+# Database ORM & Driver PostgreSQL
+SQLAlchemy
+pg8000
+
+# Data Science & Math
+pandas
+numpy
+prophet

@@ -1,0 +1,109 @@
+# ==============================================================================
+# POSKY Monorepo .gitignore Configuration
+# Protects Environment Secrets, Heavy Dependencies, Build Artifacts & System Files
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Secrets (NEVER PUSH TO GIT)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Backend specific env & secrets
+backend/.env
+backend/.env.backup
+backend/.env.production
+backend/storage/*.key
+backend/auth.json
+
+# Frontend specific env & secrets
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# AI Worker specific env
+ai-worker/.env
+
+# ------------------------------------------------------------------------------
+# 2. Node.js & Next.js Frontend
+# ------------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/*.tsbuildinfo
+frontend/.vercel/
+
+# Pnpm / Yarn / Npm Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# 3. PHP & Laravel Backend
+# ------------------------------------------------------------------------------
+vendor/
+backend/vendor/
+backend/.phpunit.result.cache
+backend/.phpunit.cache/
+backend/.phpactor.json
+backend/public/build/
+backend/public/hot/
+backend/public/storage/
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/testing/*
+backend/storage/framework/views/*
+backend/storage/logs/*.log
+backend/bootstrap/cache/*.php
+!backend/bootstrap/cache/.gitignore
+Homestead.json
+Homestead.yaml
+
+# ------------------------------------------------------------------------------
+# 4. Python AI Worker
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+ai-worker/__pycache__/
+ai-worker/venv/
+ai-worker/.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ------------------------------------------------------------------------------
+# 5. OS & IDE System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
