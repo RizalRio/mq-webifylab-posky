@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ShoppingCart, Trash2, Tag, Layers } from "lucide-react";
+import { Search, ShoppingCart, Trash2, Tag, Layers, ShoppingBag, Wrench, PackageCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/useCartStore";
 import type { Product } from "@/types";
@@ -98,7 +98,7 @@ export default function POSPage() {
                   : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-200 dark:hover:bg-blue-900/60"
               }`}
             >
-              🛒 Barang
+              <ShoppingBag className="h-3.5 w-3.5" /> Barang
             </button>
 
             <button
@@ -109,7 +109,7 @@ export default function POSPage() {
                   : "bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800/60 hover:bg-violet-200 dark:hover:bg-violet-900/60"
               }`}
             >
-              🛠️ Jasa
+              <Wrench className="h-3.5 w-3.5" /> Jasa
             </button>
 
             <button
@@ -120,7 +120,7 @@ export default function POSPage() {
                   : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-200 dark:hover:bg-amber-900/60"
               }`}
             >
-              📦 Sewa
+              <PackageCheck className="h-3.5 w-3.5" /> Sewa
             </button>
           </div>
         </div>

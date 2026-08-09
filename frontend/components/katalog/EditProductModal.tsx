@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,15 +21,22 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { productsApi } from "@/lib/api/products";
+import { Loader2, AlertCircle, ShoppingBag, Wrench, PackageCheck } from "lucide-react";
+import { toast } from "sonner";
+import type { BusinessMode } from "@/types";
 
-// 1. Skema Validasi Zod Lengkap Sesuai Model Backend (Product, Service, RentalItem)
+export interface UnifiedCatalogItem {
+  id: string;
+  sku: string;
+  name: string;
+  mode: BusinessMode;
+  price: number;
+  stock: number;
+  rawType: "product" | "service" | "rental";
+}
+
 const formSchema = z.object({
   sku: z.string().min(3, "SKU / Kode minimal 3 karakter"),
   name: z.string().min(3, "Nama minimal 3 karakter"),
@@ -45,18 +53,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { productsApi } from "@/lib/api/products";
-import { Loader2, AlertCircle, ShoppingBag, Wrench, PackageCheck, RefreshCw, Clock } from "lucide-react";
-import { toast } from "sonner";
-
-interface AddProductModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-// Helper untuk format angka dengan titik ribuan (Contoh: 150.000)
 const formatNumberWithDots = (num: number | string | undefined) => {
   if (num === undefined || num === null || num === "") return "";
   const cleanStr = String(num).replace(/\D/g, "");
@@ -64,41 +60,21 @@ const formatNumberWithDots = (num: number | string | undefined) => {
   return new Intl.NumberFormat("id-ID").format(Number(cleanStr));
 };
 
-// Helper untuk ekstrak angka murni dari string terformat
 const parseFormattedNumber = (formattedStr: string) => {
   const cleanStr = formattedStr.replace(/\D/g, "");
   return cleanStr ? Number(cleanStr) : 0;
 };
 
-// Helper untuk auto-generate SKU dari Nama Produk & Mode Bisnis
-const generateSkuFromName = (name: string, mode: string) => {
-  const prefix = mode === "BARANG" ? "BRD" : mode === "JASA" ? "SRV" : "RNT";
-  if (!name || !name.trim()) {
-    const randomNum = Math.floor(100 + Math.random() * 900);
-    return `${prefix}-${randomNum}`;
-  }
+interface EditProductModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  item: UnifiedCatalogItem | null;
+}
 
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  let initials = "";
-  if (words.length >= 3) {
-    initials = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
-  } else if (words.length === 2) {
-    initials = (words[0].slice(0, 2) + words[1][0]).toUpperCase();
-  } else {
-    initials = words[0].slice(0, 3).toUpperCase();
-  }
-
-  initials = initials.replace(/[^A-Z0-9]/g, "X");
-  const randomNum = Math.floor(100 + Math.random() * 900);
-  return `${prefix}-${initials}-${randomNum}`;
-};
-
-export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
+export function EditProductModal({ isOpen, onClose, item }: EditProductModalProps) {
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState("");
-  const [isCustomSku, setIsCustomSku] = useState(false);
 
-  // 2. Inisialisasi React Hook Form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -112,34 +88,53 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       min_stock_threshold: 5,
       duration_minutes: 60,
       description: "",
-      deposit_amount: 100000,
+      deposit_amount: 0,
     },
   });
 
-  const selectedMode = form.watch("mode");
+  // Effect untuk mengisi ulang form ketika item yang di-edit berubah
+  useEffect(() => {
+    if (item) {
+      form.reset({
+        sku: item.sku,
+        name: item.name,
+        mode: item.mode,
+        category: "",
+        price: item.price,
+        cost_price: Math.round(item.price * 0.7),
+        stock: item.stock,
+        min_stock_threshold: 5,
+        duration_minutes: 60,
+        description: "",
+        deposit_amount: 100000,
+      });
+      setErrorMessage("");
+    }
+  }, [item, form]);
 
-  const createMutation = useMutation({
+  const updateMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      if (data.mode === "BARANG") {
-        const costPrice = data.cost_price && data.cost_price > 0 ? data.cost_price : Math.round(data.price * 0.7);
-        return await productsApi.createProduct({
+      if (!item) return;
+
+      if (item.rawType === "product") {
+        return await productsApi.updateProduct(item.id, {
           sku: data.sku,
           name: data.name,
           category: data.category || undefined,
           stock: data.stock,
           min_stock_threshold: data.min_stock_threshold || 5,
-          cost_price: costPrice,
+          cost_price: data.cost_price || Math.round(data.price * 0.7),
           sell_price: data.price,
         });
-      } else if (data.mode === "JASA") {
-        return await productsApi.createService({
+      } else if (item.rawType === "service") {
+        return await productsApi.updateService(item.id, {
           name: data.name,
           description: data.description || undefined,
           duration_minutes: data.duration_minutes || 60,
           price: data.price,
         });
       } else {
-        return await productsApi.createRentalItem({
+        return await productsApi.updateRentalItem(item.id, {
           serial_number: data.sku,
           name: data.name,
           category: data.category || undefined,
@@ -149,60 +144,57 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["catalog"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["services"] });
       queryClient.invalidateQueries({ queryKey: ["rental-items"] });
-      toast.success(`Berhasil menambahkan "${variables.name}" ke katalog!`);
-      form.reset();
+      toast.success(`Perubahan "${variables.name}" berhasil disimpan!`);
       setErrorMessage("");
-      setIsCustomSku(false);
       onClose();
     },
     onError: (error: any) => {
       const msg =
         error.response?.data?.message ||
         error.message ||
-        "Gagal menyimpan data ke backend.";
+        "Gagal memperbarui data di backend.";
       setErrorMessage(msg);
-      toast.error("Gagal menyimpan: " + msg);
+      toast.error("Gagal memperbarui: " + msg);
     },
   });
 
-  // Handler auto-generate SKU saat nama produk diketik
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>, fieldChange: (val: string) => void) => {
-    const newName = e.target.value;
-    fieldChange(newName);
-
-    if (!isCustomSku) {
-      const currentMode = form.getValues("mode") || "BARANG";
-      const autoSku = generateSkuFromName(newName, currentMode);
-      form.setValue("sku", autoSku, { shouldValidate: true });
-    }
-  };
-
-  const handleRegenerateSku = () => {
-    const currentName = form.getValues("name") || "";
-    const currentMode = form.getValues("mode") || "BARANG";
-    const autoSku = generateSkuFromName(currentName, currentMode);
-    form.setValue("sku", autoSku, { shouldValidate: true });
-    setIsCustomSku(false);
-  };
-
   const onSubmit = (data: FormValues) => {
     setErrorMessage("");
-    createMutation.mutate(data);
+    updateMutation.mutate(data);
   };
+
+  if (!item) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[540px] bg-white dark:bg-slate-900 rounded-xl shadow-modal border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            Tambah Data Katalog Baru
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span>Edit Data Produk & Layanan</span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                item.mode === "BARANG"
+                  ? "bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300"
+                  : item.mode === "JASA"
+                    ? "bg-violet-100 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300"
+                    : "bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              {item.mode === "BARANG" ? (
+                <ShoppingBag className="h-3 w-3" />
+              ) : item.mode === "JASA" ? (
+                <Wrench className="h-3 w-3" />
+              ) : (
+                <PackageCheck className="h-3 w-3" />
+              )}
+              {item.mode}
+            </span>
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
-            Masukkan detail sesuai dengan mode bisnis (Barang, Layanan Jasa, atau Sewa).
+            Perbarui informasi detail produk atau layanan di dalam katalog.
           </DialogDescription>
         </DialogHeader>
 
@@ -218,71 +210,20 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4 mt-3"
           >
-            {/* Mode Bisnis (BARANG, JASA, SEWA) */}
-            <FormField
-              control={form.control}
-              name="mode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                    Mode Bisnis
-                  </FormLabel>
-                  <Select
-                    onValueChange={(val) => {
-                      field.onChange(val);
-                      if (!isCustomSku) {
-                        const currentName = form.getValues("name") || "";
-                        form.setValue("sku", generateSkuFromName(currentName, val || "BARANG"));
-                      }
-                    }}
-                    value={field.value || "BARANG"}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 transition-colors">
-                        <SelectValue placeholder="Pilih mode bisnis" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
-                      <SelectItem value="BARANG">
-                        <div className="flex items-center gap-2">
-                          <ShoppingBag className="h-4 w-4 text-blue-500" />
-                          <span>🛒 Mode Barang (Produk Fisik & Stok)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="JASA">
-                        <div className="flex items-center gap-2">
-                          <Wrench className="h-4 w-4 text-violet-500" />
-                          <span>🛠️ Mode Jasa (Layanan & Durasi)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="SEWA">
-                        <div className="flex items-center gap-2">
-                          <PackageCheck className="h-4 w-4 text-amber-500" />
-                          <span>📦 Mode Sewa (Aset & Deposit)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs text-rose-500" />
-                </FormItem>
-              )}
-            />
-
-            {/* Field Nama Produk/Jasa */}
+            {/* Field Nama Produk */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                    {selectedMode === "BARANG" ? "Nama Produk" : selectedMode === "JASA" ? "Nama Layanan Jasa" : "Nama Aset Sewa"}
+                    {item.mode === "BARANG" ? "Nama Produk" : item.mode === "JASA" ? "Nama Layanan Jasa" : "Nama Aset Sewa"}
                   </FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={selectedMode === "BARANG" ? "Contoh: Roti Gandum Utuh" : selectedMode === "JASA" ? "Contoh: Servis Mesin Kopi" : "Contoh: Proyektor Epson"}
+                      placeholder="Masukkan nama produk..."
                       className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                       {...field}
-                      onChange={(e) => handleNameChange(e, field.onChange)}
                     />
                   </FormControl>
                   <FormMessage className="text-xs text-rose-500" />
@@ -291,34 +232,20 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* SKU / Seri (Auto-Generated) */}
+              {/* Field SKU */}
               <FormField
                 control={form.control}
                 name="sku"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                        {selectedMode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
-                      </FormLabel>
-                      <button
-                        type="button"
-                        onClick={handleRegenerateSku}
-                        className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                        title="Acak / Buat ulang SKU otomatis"
-                      >
-                        <RefreshCw className="h-3 w-3" /> Auto SKU
-                      </button>
-                    </div>
+                    <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
+                      {item.mode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
+                    </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Contoh: BRD-RGU-123"
+                        placeholder="Kode SKU..."
                         className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                         {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setIsCustomSku(true);
-                        }}
                       />
                     </FormControl>
                     <FormMessage className="text-xs text-rose-500" />
@@ -326,8 +253,8 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                 )}
               />
 
-              {/* Kategori (Untuk Barang / Sewa) */}
-              {selectedMode !== "JASA" && (
+              {/* Kategori (Barang / Sewa) */}
+              {item.mode !== "JASA" && (
                 <FormField
                   control={form.control}
                   name="category"
@@ -349,15 +276,15 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                 />
               )}
 
-              {/* Durasi Layanan (Khusus Mode JASA) */}
-              {selectedMode === "JASA" && (
+              {/* Durasi Layanan (JASA) */}
+              {item.mode === "JASA" && (
                 <FormField
                   control={form.control}
                   name="duration_minutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-700 dark:text-slate-300 font-medium flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" /> Durasi Layanan (Menit)
+                      <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
+                        Durasi Layanan (Menit)
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -376,16 +303,15 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
               )}
             </div>
 
-            {/* Field Harga & Stok */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Field Harga Jual / Tarif */}
+              {/* Field Harga */}
               <FormField
                 control={form.control}
                 name="price"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                      {selectedMode === "BARANG" ? "Harga Jual (Rp)" : selectedMode === "JASA" ? "Biaya Jasa (Rp)" : "Tarif Sewa/Hari (Rp)"}
+                      {item.mode === "BARANG" ? "Harga Jual (Rp)" : item.mode === "JASA" ? "Biaya Jasa (Rp)" : "Tarif Sewa/Hari (Rp)"}
                     </FormLabel>
                     <FormControl>
                       <div className="relative flex items-center">
@@ -406,8 +332,8 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                 )}
               />
 
-              {/* Modal / Cost Price (Khusus Barang) */}
-              {selectedMode === "BARANG" && (
+              {/* Cost Price (Khusus Barang) */}
+              {item.mode === "BARANG" && (
                 <FormField
                   control={form.control}
                   name="cost_price"
@@ -437,7 +363,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
               )}
 
               {/* Deposit Amount (Khusus Sewa) */}
-              {selectedMode === "SEWA" && (
+              {item.mode === "SEWA" && (
                 <FormField
                   control={form.control}
                   name="deposit_amount"
@@ -468,7 +394,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             </div>
 
             {/* Field Stok Awal & Threshold (Khusus Barang) */}
-            {selectedMode === "BARANG" && (
+            {item.mode === "BARANG" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -476,7 +402,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                        Stok Awal
+                        Jumlah Stok
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -517,7 +443,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             )}
 
             {/* Deskripsi (Khusus Jasa) */}
-            {selectedMode === "JASA" && (
+            {item.mode === "JASA" && (
               <FormField
                 control={form.control}
                 name="description"
@@ -545,23 +471,23 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={createMutation.isPending}
+                disabled={updateMutation.isPending}
                 className="h-11 px-6 rounded-lg text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Batal
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending}
+                disabled={updateMutation.isPending}
                 className="h-11 px-6 rounded-lg bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-2"
               >
-                {createMutation.isPending ? (
+                {updateMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Menyimpan...
+                    Menyimpan Perubahan...
                   </>
                 ) : (
-                  "Simpan Data"
+                  "Simpan Perubahan"
                 )}
               </Button>
             </div>
