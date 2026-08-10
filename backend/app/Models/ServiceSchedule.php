@@ -17,4 +17,14 @@ class ServiceSchedule extends Model
         'scheduled_end',
         'status'
     ];
+
+    public function transactionItem()
+    {
+        return $this->belongsTo(TransactionItem::class, 'transaction_item_id');
+    }
+
+    public function technician()
+    {
+        return $this->belongsTo(User::class, 'technician_id');
+    }
 }

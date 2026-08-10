@@ -18,4 +18,14 @@ class RentalBooking extends Model
         'actual_return_date',
         'late_fee'
     ];
+
+    public function transactionItem()
+    {
+        return $this->belongsTo(TransactionItem::class, 'transaction_item_id');
+    }
+
+    public function rentalItem()
+    {
+        return $this->belongsTo(RentalItem::class, 'rental_item_id');
+    }
 }

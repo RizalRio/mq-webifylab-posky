@@ -32,7 +32,13 @@ class Transaction extends Model
         return $this->hasMany(TransactionItem::class);
     }
 
-    // Relasi ke User (Kasir)[cite: 4]
+    // Relasi ke Customer
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    // Relasi ke User (Kasir)
     public function cashier()
     {
         return $this->belongsTo(User::class, 'cashier_id');

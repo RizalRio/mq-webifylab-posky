@@ -85,6 +85,22 @@ export interface ReturnRentalResponse {
   total_charged: number;
 }
 
+export interface PaginatedTransactionsResponse {
+  success: boolean;
+  data: BackendTransaction[];
+  summary?: {
+    total_count: number;
+    total_revenue: number;
+    total_rentals: number;
+  };
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
 export const transactionsApi = {
   // GET /transactions
   getTransactions: async (params?: {
@@ -96,7 +112,7 @@ export const transactionsApi = {
     page?: number;
     per_page?: number;
   }) => {
-    const response = await apiClient.get<PaginatedResponse<BackendTransaction>>("/transactions", { params });
+    const response = await apiClient.get<PaginatedTransactionsResponse>("/transactions", { params });
     return response.data;
   },
 

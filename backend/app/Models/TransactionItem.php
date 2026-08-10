@@ -33,4 +33,9 @@ class TransactionItem extends Model
     {
         return $this->hasOne(RentalBooking::class, 'transaction_item_id');
     }
+
+    public function serviceSchedule()
+    {
+        return $this->hasOne(ServiceSchedule::class, 'transaction_item_id');
+    }
 }

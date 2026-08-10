@@ -13,6 +13,8 @@ import {
   Store,
   Sparkles,
   Layers,
+  FileText,
+  Boxes,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -58,9 +60,19 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           icon: ShoppingCart,
         },
         {
+          label: "Riwayat Transaksi",
+          href: "/transaksi",
+          icon: FileText,
+        },
+        {
           label: "Katalog Produk",
           href: "/katalog",
           icon: Package,
+        },
+        {
+          label: "Riwayat & Mutasi Stok",
+          href: "/stok",
+          icon: Boxes,
         },
         {
           label: "Data Pelanggan",

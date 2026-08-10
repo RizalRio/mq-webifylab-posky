@@ -25,9 +25,9 @@ class TransactionController extends Controller
         $query = Transaction::with(['customer', 'cashier', 'items.itemable', 'items.rentalBooking', 'items.serviceSchedule']);
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->search);
             $query->where(function ($q) use ($search) {
-                $q->where('id', 'ilike', "%{$search}%")
+                $q->whereRaw("CAST(id AS text) ILIKE ?", ["%{$search}%"])
                   ->orWhereHas('customer', function ($cq) use ($search) {
                       $cq->where('name', 'ilike', "%{$search}%");
                   });
@@ -46,11 +46,20 @@ class TransactionController extends Controller
         $order = $request->input('order', 'desc');
         $query->orderBy($sort, $order === 'asc' ? 'asc' : 'desc');
 
+        // Ringkasan metrik statistik transaksional
+        $totalRevenue = (float) (clone $query)->sum('total_amount');
+        $totalRentals = (clone $query)->whereIn('type', ['rental', 'mixed'])->count();
+
         $transactions = $query->paginate($request->input('per_page', 20));
 
         return response()->json([
             'success' => true,
             'data' => $transactions->items(),
+            'summary' => [
+                'total_count' => $transactions->total(),
+                'total_revenue' => $totalRevenue,
+                'total_rentals' => $totalRentals,
+            ],
             'meta' => [
                 'page' => $transactions->currentPage(),
                 'per_page' => $transactions->perPage(),
@@ -195,8 +204,24 @@ class TransactionController extends Controller
                     // Efek Samping Mode Barang
                     if ($item['itemable_type'] === 'App\\Models\\Product') {
                         $product = Product::find($item['itemable_id']);
-                        $product->stock -= $item['quantity'];
+                        $stockBefore = $product->stock;
+                        $stockAfter = max(0, $stockBefore - $item['quantity']);
+
+                        $product->stock = $stockAfter;
                         $product->save();
+
+                        \App\Models\StockLog::create([
+                            'id' => (string) Str::uuid(),
+                            'product_id' => $product->id,
+                            'user_id' => $request->user()->id,
+                            'type' => 'out',
+                            'quantity' => $item['quantity'],
+                            'stock_before' => $stockBefore,
+                            'stock_after' => $stockAfter,
+                            'reference_type' => 'sale',
+                            'reference_id' => $transaction->id,
+                            'notes' => "Penjualan Kasir POS (ID: " . substr($transaction->id, 0, 8) . ")",
+                        ]);
                     }
 
                     // Efek Samping Mode Persewaan
