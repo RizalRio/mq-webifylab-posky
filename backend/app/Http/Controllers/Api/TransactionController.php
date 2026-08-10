@@ -16,6 +16,64 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
+    /**
+     * GET /transactions
+     * Riwayat transaksi kasir dengan filter & paginasi
+     */
+    public function index(Request $request)
+    {
+        $query = Transaction::with(['customer', 'cashier', 'items.itemable', 'items.rentalBooking', 'items.serviceSchedule']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'ilike', "%{$search}%")
+                  ->orWhereHas('customer', function ($cq) use ($search) {
+                      $cq->where('name', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        $sort = $request->input('sort', 'created_at');
+        $order = $request->input('order', 'desc');
+        $query->orderBy($sort, $order === 'asc' ? 'asc' : 'desc');
+
+        $transactions = $query->paginate($request->input('per_page', 20));
+
+        return response()->json([
+            'success' => true,
+            'data' => $transactions->items(),
+            'meta' => [
+                'page' => $transactions->currentPage(),
+                'per_page' => $transactions->perPage(),
+                'total' => $transactions->total(),
+                'last_page' => $transactions->lastPage()
+            ]
+        ]);
+    }
+
+    /**
+     * GET /transactions/{id}
+     * Detail transaksi spesifik
+     */
+    public function show($id)
+    {
+        $transaction = Transaction::with(['customer', 'cashier', 'items.itemable', 'items.rentalBooking', 'items.serviceSchedule'])->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $transaction
+        ]);
+    }
+
     public function store(Request $request)
     {
         // 1. Validasi Input Payload yang Diperluas
@@ -173,6 +231,28 @@ class TransactionController extends Controller
                             'scheduled_end' => $endTime,
                             'status' => 'scheduled',
                         ]);
+                    }
+                }
+
+                // --- EFEK SAMPING UPDATE METRIK RFM PELANGGAN ---
+                if (!empty($validated['customer_id'])) {
+                    $customer = \App\Models\Customer::find($validated['customer_id']);
+                    if ($customer) {
+                        $customer->total_transactions = ($customer->total_transactions ?? 0) + 1;
+                        $customer->total_spent = ($customer->total_spent ?? 0) + $totalAmount;
+                        $customer->last_transaction_at = now();
+
+                        if ($customer->total_transactions >= 10 || $customer->total_spent >= 5000000) {
+                            $customer->rfm_segment = 'Champions';
+                        } elseif ($customer->total_transactions >= 5 || $customer->total_spent >= 1000000) {
+                            $customer->rfm_segment = 'Loyal';
+                        } elseif ($customer->total_transactions >= 2) {
+                            $customer->rfm_segment = 'Recent Customers';
+                        } else {
+                            $customer->rfm_segment = 'New';
+                        }
+
+                        $customer->save();
                     }
                 }
 

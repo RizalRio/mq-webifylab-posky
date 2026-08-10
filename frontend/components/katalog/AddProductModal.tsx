@@ -30,17 +30,42 @@ import {
 
 // 1. Skema Validasi Zod Lengkap Sesuai Model Backend (Product, Service, RentalItem)
 const formSchema = z.object({
-  sku: z.string().min(3, "SKU / Kode minimal 3 karakter"),
+  sku: z.string().optional(),
   name: z.string().min(3, "Nama minimal 3 karakter"),
   mode: z.enum(["BARANG", "JASA", "SEWA"]),
   category: z.string().optional(),
   price: z.number().min(1, "Harga wajib diisi dan lebih dari 0"),
   cost_price: z.number().optional(),
-  stock: z.number().min(0, "Stok tidak boleh bernilai minus"),
+  stock: z.number().optional(),
   min_stock_threshold: z.number().optional(),
   duration_minutes: z.number().optional(),
   description: z.string().optional(),
   deposit_amount: z.number().optional(),
+}).superRefine((data, ctx) => {
+  if (data.mode === "BARANG") {
+    if (!data.sku || data.sku.trim().length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Kode SKU minimal 3 karakter untuk mode Barang",
+        path: ["sku"],
+      });
+    }
+    if (data.stock === undefined || data.stock < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Stok awal wajib diisi dan tidak boleh minus",
+        path: ["stock"],
+      });
+    }
+  } else if (data.mode === "SEWA") {
+    if (!data.sku || data.sku.trim().length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Nomor seri aset minimal 3 karakter untuk mode Sewa",
+        path: ["sku"],
+      });
+    }
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -123,10 +148,10 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       if (data.mode === "BARANG") {
         const costPrice = data.cost_price && data.cost_price > 0 ? data.cost_price : Math.round(data.price * 0.7);
         return await productsApi.createProduct({
-          sku: data.sku,
+          sku: data.sku!,
           name: data.name,
           category: data.category || undefined,
-          stock: data.stock,
+          stock: data.stock ?? 0,
           min_stock_threshold: data.min_stock_threshold || 5,
           cost_price: costPrice,
           sell_price: data.price,
@@ -140,7 +165,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
         });
       } else {
         return await productsApi.createRentalItem({
-          serial_number: data.sku,
+          serial_number: data.sku!,
           name: data.name,
           category: data.category || undefined,
           daily_rate: data.price,
@@ -149,7 +174,6 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["catalog"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["services"] });
       queryClient.invalidateQueries({ queryKey: ["rental-items"] });
@@ -218,7 +242,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4 mt-3"
           >
-            {/* Mode Bisnis (BARANG, JASA, SEWA) */}
+            {/* Mode Bisnis Segmented Card Selector (BARANG, JASA, SEWA) */}
             <FormField
               control={form.control}
               name="mode"
@@ -227,42 +251,75 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                   <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
                     Mode Bisnis
                   </FormLabel>
-                  <Select
-                    onValueChange={(val) => {
-                      field.onChange(val);
-                      if (!isCustomSku) {
-                        const currentName = form.getValues("name") || "";
-                        form.setValue("sku", generateSkuFromName(currentName, val || "BARANG"));
-                      }
-                    }}
-                    value={field.value || "BARANG"}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 transition-colors">
-                        <SelectValue placeholder="Pilih mode bisnis" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
-                      <SelectItem value="BARANG">
-                        <div className="flex items-center gap-2">
-                          <ShoppingBag className="h-4 w-4 text-blue-500" />
-                          <span>🛒 Mode Barang (Produk Fisik & Stok)</span>
+                  <FormControl>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("BARANG");
+                          if (!isCustomSku) {
+                            const currentName = form.getValues("name") || "";
+                            form.setValue("sku", generateSkuFromName(currentName, "BARANG"));
+                          }
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                          field.value === "BARANG"
+                            ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/20 font-semibold"
+                            : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                        }`}
+                      >
+                        <ShoppingBag className={`h-5 w-5 ${field.value === "BARANG" ? "text-blue-600 dark:text-blue-400" : "text-slate-400"}`} />
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-semibold">Barang</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">Fisik & Stok</span>
                         </div>
-                      </SelectItem>
-                      <SelectItem value="JASA">
-                        <div className="flex items-center gap-2">
-                          <Wrench className="h-4 w-4 text-violet-500" />
-                          <span>🛠️ Mode Jasa (Layanan & Durasi)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("JASA");
+                          if (!isCustomSku) {
+                            const currentName = form.getValues("name") || "";
+                            form.setValue("sku", generateSkuFromName(currentName, "JASA"));
+                          }
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                          field.value === "JASA"
+                            ? "border-violet-500 bg-violet-50/60 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 ring-2 ring-violet-500/20 font-semibold"
+                            : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                        }`}
+                      >
+                        <Wrench className={`h-5 w-5 ${field.value === "JASA" ? "text-violet-600 dark:text-violet-400" : "text-slate-400"}`} />
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-semibold">Jasa</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">Layanan Jasa</span>
                         </div>
-                      </SelectItem>
-                      <SelectItem value="SEWA">
-                        <div className="flex items-center gap-2">
-                          <PackageCheck className="h-4 w-4 text-amber-500" />
-                          <span>📦 Mode Sewa (Aset & Deposit)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("SEWA");
+                          if (!isCustomSku) {
+                            const currentName = form.getValues("name") || "";
+                            form.setValue("sku", generateSkuFromName(currentName, "SEWA"));
+                          }
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                          field.value === "SEWA"
+                            ? "border-amber-500 bg-amber-50/60 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20 font-semibold"
+                            : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                        }`}
+                      >
+                        <PackageCheck className={`h-5 w-5 ${field.value === "SEWA" ? "text-amber-600 dark:text-amber-400" : "text-slate-400"}`} />
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-semibold">Sewa</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">Aset & Deposit</span>
                         </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                      </button>
+                    </div>
+                  </FormControl>
                   <FormMessage className="text-xs text-rose-500" />
                 </FormItem>
               )}
@@ -291,40 +348,42 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* SKU / Seri (Auto-Generated) */}
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                        {selectedMode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
-                      </FormLabel>
-                      <button
-                        type="button"
-                        onClick={handleRegenerateSku}
-                        className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                        title="Acak / Buat ulang SKU otomatis"
-                      >
-                        <RefreshCw className="h-3 w-3" /> Auto SKU
-                      </button>
-                    </div>
-                    <FormControl>
-                      <Input
-                        placeholder="Contoh: BRD-RGU-123"
-                        className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setIsCustomSku(true);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs text-rose-500" />
-                  </FormItem>
-                )}
-              />
+              {/* SKU / Seri (Auto-Generated) - Khusus Mode BARANG & SEWA */}
+              {selectedMode !== "JASA" && (
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
+                          {selectedMode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
+                        </FormLabel>
+                        <button
+                          type="button"
+                          onClick={handleRegenerateSku}
+                          className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                          title="Acak / Buat ulang SKU otomatis"
+                        >
+                          <RefreshCw className="h-3 w-3" /> Auto SKU
+                        </button>
+                      </div>
+                      <FormControl>
+                        <Input
+                          placeholder={selectedMode === "SEWA" ? "Contoh: AST-RNT-123" : "Contoh: BRD-RGU-123"}
+                          className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setIsCustomSku(true);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs text-rose-500" />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Kategori (Untuk Barang / Sewa) */}
               {selectedMode !== "JASA" && (

@@ -16,7 +16,7 @@ class CustomerController extends Controller
     {
         $query = Customer::query();
 
-        // Pencarian multi-kolom (Nama, Telepon, Email)[cite: 1]
+        // Pencarian multi-kolom (Nama, Telepon, Email)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -24,6 +24,11 @@ class CustomerController extends Controller
                     ->orWhere('phone', 'ilike', "%{$search}%")
                     ->orWhere('email', 'ilike', "%{$search}%");
             });
+        }
+
+        // Filter berdasarkan segmen RFM (Contoh: Champions, Loyal, Recent Customers, At Risk, New)
+        if ($request->filled('rfm_segment')) {
+            $query->where('rfm_segment', $request->rfm_segment);
         }
 
         $sort = $request->input('sort', 'created_at');

@@ -57,7 +57,7 @@ class RentalItemController extends Controller
         ]);
 
         $validated['id'] = (string) Str::uuid();
-        $validated['status'] = 'available'; // Default status[cite: 1]
+        $validated['status'] = 'available';
 
         $rentalItem = RentalItem::create($validated);
 

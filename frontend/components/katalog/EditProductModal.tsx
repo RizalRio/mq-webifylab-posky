@@ -22,6 +22,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { productsApi } from "@/lib/api/products";
 import { Loader2, AlertCircle, ShoppingBag, Wrench, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -32,23 +39,31 @@ export interface UnifiedCatalogItem {
   sku: string;
   name: string;
   mode: BusinessMode;
+  category?: string;
   price: number;
+  cost_price?: number;
   stock: number;
+  min_stock_threshold?: number;
+  duration_minutes?: number;
+  description?: string;
+  deposit_amount?: number;
+  status?: "available" | "rented" | "maintenance";
   rawType: "product" | "service" | "rental";
 }
 
 const formSchema = z.object({
-  sku: z.string().min(3, "SKU / Kode minimal 3 karakter"),
+  sku: z.string().optional(),
   name: z.string().min(3, "Nama minimal 3 karakter"),
   mode: z.enum(["BARANG", "JASA", "SEWA"]),
   category: z.string().optional(),
   price: z.number().min(1, "Harga wajib diisi dan lebih dari 0"),
   cost_price: z.number().optional(),
-  stock: z.number().min(0, "Stok tidak boleh bernilai minus"),
+  stock: z.number().optional(),
   min_stock_threshold: z.number().optional(),
   duration_minutes: z.number().optional(),
   description: z.string().optional(),
   deposit_amount: z.number().optional(),
+  status: z.enum(["available", "rented", "maintenance"]).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -99,14 +114,15 @@ export function EditProductModal({ isOpen, onClose, item }: EditProductModalProp
         sku: item.sku,
         name: item.name,
         mode: item.mode,
-        category: "",
+        category: item.category || "",
         price: item.price,
-        cost_price: Math.round(item.price * 0.7),
+        cost_price: item.cost_price !== undefined && item.cost_price !== null && !isNaN(item.cost_price) ? item.cost_price : Math.round(item.price * 0.7),
         stock: item.stock,
-        min_stock_threshold: 5,
-        duration_minutes: 60,
-        description: "",
-        deposit_amount: 100000,
+        min_stock_threshold: item.min_stock_threshold ?? 5,
+        duration_minutes: item.duration_minutes ?? 60,
+        description: item.description || "",
+        deposit_amount: item.deposit_amount ?? 0,
+        status: item.status || "available",
       });
       setErrorMessage("");
     }
@@ -118,10 +134,10 @@ export function EditProductModal({ isOpen, onClose, item }: EditProductModalProp
 
       if (item.rawType === "product") {
         return await productsApi.updateProduct(item.id, {
-          sku: data.sku,
+          sku: data.sku!,
           name: data.name,
           category: data.category || undefined,
-          stock: data.stock,
+          stock: data.stock ?? 0,
           min_stock_threshold: data.min_stock_threshold || 5,
           cost_price: data.cost_price || Math.round(data.price * 0.7),
           sell_price: data.price,
@@ -135,11 +151,12 @@ export function EditProductModal({ isOpen, onClose, item }: EditProductModalProp
         });
       } else {
         return await productsApi.updateRentalItem(item.id, {
-          serial_number: data.sku,
+          serial_number: data.sku!,
           name: data.name,
           category: data.category || undefined,
           daily_rate: data.price,
           deposit_amount: data.deposit_amount || 0,
+          status: data.status || "available",
         });
       }
     },
@@ -232,26 +249,28 @@ export function EditProductModal({ isOpen, onClose, item }: EditProductModalProp
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Field SKU */}
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
-                      {item.mode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Kode SKU..."
-                        className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs text-rose-500" />
-                  </FormItem>
-                )}
-              />
+              {/* Field SKU (Khusus Mode BARANG & SEWA) */}
+              {item.mode !== "JASA" && (
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
+                        {item.mode === "SEWA" ? "Nomor Seri Aset" : "Kode SKU"}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Kode SKU..."
+                          className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 transition-colors"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs text-rose-500" />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Kategori (Barang / Sewa) */}
               {item.mode !== "JASA" && (
@@ -392,6 +411,37 @@ export function EditProductModal({ isOpen, onClose, item }: EditProductModalProp
                 />
               )}
             </div>
+
+            {/* Status Aset (Khusus Sewa) */}
+            {item.mode === "SEWA" && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-slate-700 dark:text-slate-300 font-medium">
+                      Status Kondisi Aset
+                    </FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "available"}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full h-11 rounded-lg border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 transition-colors">
+                          <SelectValue placeholder="Pilih status aset" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+                        <SelectItem value="available">Tersedia (Available)</SelectItem>
+                        <SelectItem value="rented">Sedang Disewa (Rented)</SelectItem>
+                        <SelectItem value="maintenance">Dalam Perawatan (Maintenance)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage className="text-xs text-rose-500" />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Field Stok Awal & Threshold (Khusus Barang) */}
             {item.mode === "BARANG" && (

@@ -11,13 +11,20 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import type { BusinessMode } from "@/types";
 
-interface UnifiedCatalogItem {
+export interface UnifiedCatalogItem {
   id: string;
   sku: string;
   name: string;
   mode: BusinessMode;
+  category?: string;
   price: number;
+  cost_price?: number;
   stock: number;
+  min_stock_threshold?: number;
+  duration_minutes?: number;
+  description?: string;
+  deposit_amount?: number;
+  status?: "available" | "rented" | "maintenance";
   rawType: "product" | "service" | "rental";
 }
 
@@ -45,6 +52,8 @@ export default function KatalogPage() {
     queryFn: () => productsApi.getProducts({ search: debouncedSearch }),
     enabled: selectedMode === "ALL" || selectedMode === "BARANG",
     placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch Services (JASA)
@@ -53,6 +62,8 @@ export default function KatalogPage() {
     queryFn: () => productsApi.getServices({ search: debouncedSearch }),
     enabled: selectedMode === "ALL" || selectedMode === "JASA",
     placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch Rental Items (SEWA)
@@ -61,6 +72,8 @@ export default function KatalogPage() {
     queryFn: () => productsApi.getRentalItems({ search: debouncedSearch }),
     enabled: selectedMode === "ALL" || selectedMode === "SEWA",
     placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Delete Mutation
@@ -97,8 +110,11 @@ export default function KatalogPage() {
         sku: p.sku,
         name: p.name,
         mode: "BARANG",
+        category: p.category || "",
         price: Number(p.sell_price),
+        cost_price: Number(p.cost_price),
         stock: p.stock,
+        min_stock_threshold: p.min_stock_threshold ?? 5,
         rawType: "product",
       });
     });
@@ -108,10 +124,12 @@ export default function KatalogPage() {
     servicesData.data.forEach((s) => {
       unifiedItems.push({
         id: s.id,
-        sku: `SRV-${s.id.slice(0, 4).toUpperCase()}`,
+        sku: "-",
         name: s.name,
         mode: "JASA",
         price: Number(s.price),
+        duration_minutes: s.duration_minutes ? Number(s.duration_minutes) : 60,
+        description: s.description || "",
         stock: 99,
         rawType: "service",
       });
@@ -125,7 +143,10 @@ export default function KatalogPage() {
         sku: r.serial_number,
         name: r.name,
         mode: "SEWA",
+        category: r.category || "",
         price: Number(r.daily_rate),
+        deposit_amount: Number(r.deposit_amount),
+        status: r.status,
         stock: r.status === "available" ? 1 : 0,
         rawType: "rental",
       });
@@ -342,10 +363,27 @@ export default function KatalogPage() {
                       {formatRupiah(item.price)}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-right text-slate-600 dark:text-slate-300 font-tabular tabular-nums font-medium">
-                      {item.mode === "JASA" ? "Layanan" : item.stock > 0 ? item.stock : "0"}
+                      {item.mode === "JASA" ? "Layanan" : item.mode === "SEWA" ? "1 Unit Aset" : `${item.stock} unit`}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-center">
-                      {item.mode === "JASA" || item.stock > 10 ? (
+                      {item.mode === "SEWA" ? (
+                        item.status === "available" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                            Tersedia
+                          </span>
+                        ) : item.status === "rented" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-950/60 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500"></span>
+                            Sedang Disewa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                            Perawatan
+                          </span>
+                        )
+                      ) : item.mode === "JASA" || item.stock > (item.min_stock_threshold ?? 5) ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                           Tersedia
@@ -353,12 +391,12 @@ export default function KatalogPage() {
                       ) : item.stock > 0 ? (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                          Menipis
+                          Stok Menipis
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 dark:bg-rose-950/60 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:text-rose-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-                          Habis
+                          Stok Habis
                         </span>
                       )}
                     </td>

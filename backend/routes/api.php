@@ -27,7 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // Transactions
+    Route::get('/transactions', [TransactionController::class, 'index']);
     Route::post('/transactions', [TransactionController::class, 'store']);
+    Route::get('/transactions/{id}', [TransactionController::class, 'show']);
     Route::post('/transactions/{id}/return', [TransactionController::class, 'returnRental']); // Endpoint pengembalian sewa
 
     // Master Data

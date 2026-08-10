@@ -19,7 +19,14 @@ class Customer extends Model
         'name',
         'phone',
         'email',
-        'address'
+        'address',
+        'last_transaction_at',
+        'total_transactions',
+        'total_spent',
+        'r_score',
+        'f_score',
+        'm_score',
+        'rfm_segment'
     ];
 
     // Relasi ke Transaksi
