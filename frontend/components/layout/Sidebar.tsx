@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -9,12 +9,14 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Store,
   Sparkles,
-  Layers,
   FileText,
   Boxes,
+  Receipt,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,11 +25,19 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-interface NavItem {
+interface SubNavItem {
   label: string;
   href: string;
   icon: any;
   badge?: string;
+}
+
+interface NavItem {
+  label: string;
+  href?: string;
+  icon: any;
+  badge?: string;
+  children?: SubNavItem[];
 }
 
 interface NavSection {
@@ -39,9 +49,19 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
 
+  // State untuk melacak sub-menu mana yang terbuka
+  const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
+    transaksi: true,
+    inventaris: true,
+  });
+
+  const toggleSubMenu = (key: string) => {
+    setOpenSubMenus((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const navSections: NavSection[] = [
     {
-      title: "UTAMA",
+      title: "RINGKASAN",
       items: [
         {
           label: "Overview Analitik",
@@ -52,36 +72,75 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       ],
     },
     {
-      title: "OPERASIONAL",
+      title: "PENJUALAN & TRANSAKSI",
       items: [
         {
-          label: "Kasir (POS)",
-          href: "/pos",
+          label: "Modul Transaksi",
           icon: ShoppingCart,
+          children: [
+            {
+              label: "Kasir (POS)",
+              href: "/pos",
+              icon: ShoppingCart,
+            },
+            {
+              label: "Riwayat Transaksi",
+              href: "/transaksi",
+              icon: FileText,
+            },
+          ],
         },
+      ],
+    },
+    {
+      title: "INVENTARIS & LOGISTIK",
+      items: [
         {
-          label: "Riwayat Transaksi",
-          href: "/transaksi",
-          icon: FileText,
-        },
-        {
-          label: "Katalog Produk",
-          href: "/katalog",
+          label: "Manajemen Barang",
           icon: Package,
+          children: [
+            {
+              label: "Katalog Produk",
+              href: "/katalog",
+              icon: Package,
+            },
+            {
+              label: "Riwayat & Mutasi Stok",
+              href: "/stok",
+              icon: Boxes,
+            },
+          ],
         },
+      ],
+    },
+    {
+      title: "PELANGGAN & RELASI",
+      items: [
         {
-          label: "Riwayat & Mutasi Stok",
-          href: "/stok",
-          icon: Boxes,
-        },
-        {
-          label: "Data Pelanggan",
+          label: "Data Pelanggan & RFM",
           href: "/pelanggan",
           icon: Users,
         },
       ],
     },
   ];
+
+  // Buka sub-menu secara otomatis jika anak menu-nya sedang aktif
+  useEffect(() => {
+    navSections.forEach((section) => {
+      section.items.forEach((item) => {
+        if (item.children) {
+          const hasActiveChild = item.children.some((child) =>
+            pathname.startsWith(child.href)
+          );
+          if (hasActiveChild) {
+            const key = item.label.toLowerCase().split(" ")[0];
+            setOpenSubMenus((prev) => ({ ...prev, [key]: true }));
+          }
+        }
+      });
+    });
+  }, [pathname]);
 
   return (
     <>
@@ -100,7 +159,7 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           ${!isMobileOpen && isCollapsed ? "md:w-20" : "md:w-64"}
         `}
       >
-        {/* Header Khusus Mobile (Menampilkan Tombol Silang) */}
+        {/* Header Khusus Mobile */}
         <div className="flex md:hidden items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">
@@ -116,8 +175,8 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* Menu Navigasi Dikelompokkan */}
-        <div className="flex-1 p-3 flex flex-col gap-5 overflow-y-auto">
+        {/* Menu Navigasi Sub-Sub Grouping */}
+        <div className="flex-1 p-3 flex flex-col gap-4 overflow-y-auto">
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               <p
@@ -130,51 +189,123 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
 
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(item.href);
+                const menuKey = item.label.toLowerCase().split(" ")[0];
+                const isOpen = openSubMenus[menuKey] ?? false;
+
+                // Cek jika item tunggal tanpa anak
+                if (!item.children && item.href) {
+                  const isActive =
+                    item.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(item.href);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`group relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+                        isActive
+                          ? "bg-indigo-600 dark:bg-indigo-500 text-white font-semibold shadow-md shadow-indigo-500/25 dark:shadow-indigo-500/15"
+                          : "text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-5 w-5 shrink-0 transition-transform group-hover:scale-105 ${
+                          isActive
+                            ? "text-white"
+                            : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"
+                        }`}
+                      />
+                      <span
+                        className={`${
+                          !isMobileOpen && isCollapsed ? "md:hidden" : "block"
+                        } truncate flex-1`}
+                      >
+                        {item.label}
+                      </span>
+
+                      {item.badge && (
+                        <span
+                          className={`hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            isActive
+                              ? "bg-white/20 text-white border border-white/20"
+                              : "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80"
+                          } ${
+                            !isMobileOpen && isCollapsed ? "md:hidden" : "block"
+                          }`}
+                        >
+                          <Sparkles className={`h-2.5 w-2.5 ${isActive ? "text-white" : "text-indigo-500"}`} />
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                }
+
+                // Cek jika item memiliki sub-menu (children)
+                const isAnyChildActive = item.children?.some((child) =>
+                  pathname.startsWith(child.href)
+                );
 
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`group relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${
-                      isActive
-                        ? "bg-indigo-600 dark:bg-indigo-500 text-white font-semibold shadow-md shadow-indigo-500/25 dark:shadow-indigo-500/15"
-                        : "text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100"
-                    }`}
-                  >
-                    <Icon
-                      className={`h-5 w-5 shrink-0 transition-transform group-hover:scale-105 ${
-                        isActive
-                          ? "text-white"
-                          : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"
+                  <div key={item.label} className="flex flex-col gap-1">
+                    {/* Header Sub-Group Parent */}
+                    <button
+                      onClick={() => toggleSubMenu(menuKey)}
+                      className={`w-full group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        isAnyChildActive
+                          ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50"
                       }`}
-                    />
-                    <span
-                      className={`${
-                        !isMobileOpen && isCollapsed ? "md:hidden" : "block"
-                      } truncate flex-1`}
                     >
-                      {item.label}
-                    </span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className="h-5 w-5 shrink-0 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                        <span
+                          className={`${
+                            !isMobileOpen && isCollapsed ? "md:hidden" : "block"
+                          } truncate`}
+                        >
+                          {item.label}
+                        </span>
+                      </div>
+                      {(!isCollapsed || isMobileOpen) && (
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 transition-transform duration-200 text-slate-400 ${
+                            isOpen ? "rotate-180 text-indigo-600 dark:text-indigo-400" : ""
+                          }`}
+                        />
+                      )}
+                    </button>
 
-                    {item.badge && (
-                      <span
-                        className={`hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          isActive
-                            ? "bg-white/20 text-white border border-white/20"
-                            : "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80"
-                        } ${
-                          !isMobileOpen && isCollapsed ? "md:hidden" : "block"
-                        }`}
-                      >
-                        <Sparkles className={`h-2.5 w-2.5 ${isActive ? "text-white" : "text-indigo-500"}`} />
-                        {item.badge}
-                      </span>
+                    {/* Sub-Items Accordion Children */}
+                    {isOpen && (!isCollapsed || isMobileOpen) && (
+                      <div className="ml-4 pl-3 border-l-2 border-slate-200 dark:border-slate-800 flex flex-col gap-1 my-0.5 animate-in slide-in-from-top-1 duration-200">
+                        {item.children?.map((child) => {
+                          const ChildIcon = child.icon;
+                          const isChildActive = pathname.startsWith(child.href);
+
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                                isChildActive
+                                  ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200"
+                              }`}
+                            >
+                              <ChildIcon
+                                className={`h-4 w-4 shrink-0 ${
+                                  isChildActive ? "text-white" : "text-slate-400 dark:text-slate-500"
+                                }`}
+                              />
+                              <span className="truncate flex-1">{child.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     )}
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -222,3 +353,4 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
     </>
   );
 }
+
