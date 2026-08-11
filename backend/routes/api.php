@@ -62,7 +62,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // DSS AHP Trigger
     Route::post('ahp/calculate', [AhpController::class, 'triggerCalculation']);
 
-    // Analytics Dashboard Routes
-    Route::get('analytics/rfm', [AnalyticsController::class, 'rfm']);
-    Route::get('analytics/cohort', [AnalyticsController::class, 'cohort']);
+    // Analytics & Reports
+    Route::prefix('analytics')->group(function () {
+        Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
+        Route::get('/rfm', [AnalyticsController::class, 'rfm']);
+        Route::get('/cohort', [AnalyticsController::class, 'cohort']);
+    });
 });

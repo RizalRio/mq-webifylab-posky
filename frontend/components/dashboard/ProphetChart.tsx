@@ -10,26 +10,30 @@ import {
   YAxis,
 } from "recharts";
 
-// Data simulasi: Setengah awal adalah data historis, setengah akhir adalah prediksi AI
-const data = [
-  { tanggal: "1 Agu", aktual: 12.5, prediksi: 12.0 },
-  { tanggal: "5 Agu", aktual: 15.2, prediksi: 14.8 },
-  { tanggal: "10 Agu", aktual: 14.1, prediksi: 14.5 },
-  { tanggal: "15 Agu", aktual: 16.5, prediksi: 16.0 },
-  { tanggal: "20 Agu", aktual: 18.2, prediksi: 17.5 },
-  // Mulai titik ini, data aktual kosong (masa depan), hanya ada prediksi
-  { tanggal: "25 Agu", aktual: null, prediksi: 19.1 },
-  { tanggal: "30 Agu", aktual: null, prediksi: 21.4 },
-  { tanggal: "4 Sep", aktual: null, prediksi: 20.8 },
-  { tanggal: "9 Sep", aktual: null, prediksi: 23.5 },
-];
+import "dayjs/locale/id";
+import dayjs from "dayjs";
 
-export function ProphetChart() {
+interface TrendData {
+  date: string;
+  sales: number;
+}
+
+interface ProphetChartProps {
+  trendData: TrendData[];
+}
+
+export function ProphetChart({ trendData }: ProphetChartProps) {
+  // Format data untuk Recharts
+  const chartData = trendData.map((item) => ({
+    tanggal: dayjs(item.date).format("D MMM"),
+    aktual: item.sales,
+  }));
+
   return (
     <div className="h-[320px] w-full mt-4">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
-          data={data}
+          data={chartData}
           margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
         >
           <CartesianGrid
@@ -50,7 +54,12 @@ export function ProphetChart() {
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: "#94a3b8" }}
-            tickFormatter={(value) => `${value}M`}
+            tickFormatter={(value) => {
+              if (value >= 1000000)
+                return `Rp ${(value / 1000000).toFixed(1)}M`;
+              if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}K`;
+              return `Rp ${value}`;
+            }}
           />
 
           <Tooltip
@@ -64,19 +73,14 @@ export function ProphetChart() {
               color: "#f8fafc",
             }}
             itemStyle={{ color: "#f8fafc", fontWeight: 500 }}
-            formatter={(value: any) => [`Rp ${value} Juta`, "Pendapatan"]}
-          />
-
-          {/* Area Utama (Prediksi Prophet - Warna Indigo Soft) */}
-          <Area
-            type="monotone"
-            dataKey="prediksi"
-            stroke="#818cf8"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            fill="#e0e7ff"
-            fillOpacity={0.3}
-            name="Prediksi AI"
+            formatter={(value: any) => [
+              new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+                minimumFractionDigits: 0,
+              }).format(value),
+              "Pendapatan",
+            ]}
           />
 
           {/* Area Sekunder (Data Aktual - Warna Indigo Solid) */}

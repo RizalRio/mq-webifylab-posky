@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -8,10 +10,24 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
-
+import { useQuery } from "@tanstack/react-query";
+import { getDashboardMetrics } from "@/lib/api/analytics";
 import { ProphetChart } from "@/components/dashboard/ProphetChart";
 
 export default function DashboardPage() {
+  const { data: metrics, isLoading, isError } = useQuery({
+    queryKey: ['dashboardMetrics'],
+    queryFn: getDashboardMetrics,
+  });
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       {/* HEADER HALAMAN */}
@@ -48,11 +64,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            Rp 24.500.000
+            {isLoading ? "..." : formatCurrency(metrics?.revenue.total || 0)}
           </p>
           <div className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <ArrowUpRight className="h-3 w-3" />
-            <span className="font-tabular tabular-nums">+12.5%</span> dari bulan lalu
+            {metrics?.revenue?.growth && metrics.revenue.growth >= 0 ? (
+              <><ArrowUpRight className="h-3 w-3" /><span className="font-tabular tabular-nums">+{metrics.revenue.growth}%</span></>
+            ) : (
+              <><ArrowDownRight className="h-3 w-3 text-rose-500" /><span className="font-tabular tabular-nums text-rose-500">{metrics?.revenue?.growth}%</span></>
+            )}
+             dari bulan lalu
           </div>
         </div>
 
@@ -67,11 +87,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            1.432
+            {isLoading ? "..." : new Intl.NumberFormat('id-ID').format(metrics?.transactions.total || 0)}
           </p>
           <div className="mt-2 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-            <ArrowUpRight className="h-3 w-3" />
-            <span className="font-tabular tabular-nums">+5.2%</span> dari bulan lalu
+            {metrics?.transactions?.growth && metrics.transactions.growth >= 0 ? (
+              <><ArrowUpRight className="h-3 w-3" /><span className="font-tabular tabular-nums">+{metrics.transactions.growth}%</span></>
+            ) : (
+              <><ArrowDownRight className="h-3 w-3 text-rose-500" /><span className="font-tabular tabular-nums text-rose-500">{metrics?.transactions?.growth}%</span></>
+            )}
+             dari bulan lalu
           </div>
         </div>
 
@@ -86,11 +110,10 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            892
+            {isLoading ? "..." : new Intl.NumberFormat('id-ID').format(metrics?.customers.total || 0)}
           </p>
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-400">
-            <ArrowDownRight className="h-3 w-3" />
-            <span className="font-tabular tabular-nums">-2.1%</span> (Butuh retensi)
+          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span>Total pelanggan tersimpan</span>
           </div>
         </div>
 
@@ -105,7 +128,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            14 <span className="text-sm font-normal text-slate-500 dark:text-slate-400">item</span>
+            {isLoading ? "..." : metrics?.inventory.low_stock_count || 0} <span className="text-sm font-normal text-slate-500 dark:text-slate-400">item</span>
           </p>
           <div className="mt-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
             <span>Segera lakukan restock</span>
@@ -132,7 +155,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex-1 w-full">
-            <ProphetChart />
+            <ProphetChart trendData={metrics?.sales_trend || []} />
           </div>
         </div>
 

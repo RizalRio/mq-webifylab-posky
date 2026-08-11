@@ -17,6 +17,7 @@ import {
   Boxes,
   Receipt,
   Layers,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -53,6 +54,7 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
     transaksi: true,
     inventaris: true,
+    modul: true,
   });
 
   const toggleSubMenu = (key: string) => {
@@ -117,9 +119,21 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       title: "PELANGGAN & RELASI",
       items: [
         {
-          label: "Data Pelanggan & RFM",
-          href: "/pelanggan",
+          label: "Modul Pelanggan",
           icon: Users,
+          children: [
+            {
+              label: "Daftar Pelanggan",
+              href: "/pelanggan",
+              icon: Users,
+            },
+            {
+              label: "Analitik RFM & Cohort",
+              href: "/pelanggan/analitik",
+              icon: BarChart3,
+              badge: "Insight",
+            },
+          ],
         },
       ],
     },
@@ -282,7 +296,10 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
                       <div className="ml-4 pl-3 border-l-2 border-slate-200 dark:border-slate-800 flex flex-col gap-1 my-0.5 animate-in slide-in-from-top-1 duration-200">
                         {item.children?.map((child) => {
                           const ChildIcon = child.icon;
-                          const isChildActive = pathname.startsWith(child.href);
+                          const isChildActive =
+                            child.href === "/pelanggan"
+                              ? pathname === "/pelanggan" || (pathname.startsWith("/pelanggan/") && !pathname.startsWith("/pelanggan/analitik"))
+                              : pathname.startsWith(child.href);
 
                           return (
                             <Link

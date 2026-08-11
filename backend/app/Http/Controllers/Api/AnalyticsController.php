@@ -6,9 +6,110 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Customer;
+use App\Models\Transaction;
+use App\Models\Product;
+use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    /**
+     * GET /analytics/dashboard
+     * Endpoint utama untuk metrik dashboard
+     */
+    public function dashboard(Request $request)
+    {
+        $tenantId = $request->user()->tenant_id;
+
+        try {
+            // 1. Total Pendapatan & Jumlah Transaksi (Bulan Ini vs Bulan Lalu)
+            $startOfThisMonth = Carbon::now()->startOfMonth();
+            $startOfLastMonth = Carbon::now()->subMonth()->startOfMonth();
+            $endOfLastMonth = Carbon::now()->subMonth()->endOfMonth();
+
+            $thisMonthStats = Transaction::where('tenant_id', $tenantId)
+                ->where('status', 'completed')
+                ->where('created_at', '>=', $startOfThisMonth)
+                ->selectRaw('COALESCE(SUM(total_amount), 0) as revenue, COUNT(*) as count')
+                ->first();
+
+            $lastMonthStats = Transaction::where('tenant_id', $tenantId)
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
+                ->selectRaw('COALESCE(SUM(total_amount), 0) as revenue, COUNT(*) as count')
+                ->first();
+
+            // Hitung persentase kenaikan/penurunan pendapatan
+            $revenueGrowth = 0;
+            if ($lastMonthStats->revenue > 0) {
+                $revenueGrowth = (($thisMonthStats->revenue - $lastMonthStats->revenue) / $lastMonthStats->revenue) * 100;
+            }
+
+            // Hitung persentase kenaikan/penurunan transaksi
+            $transactionGrowth = 0;
+            if ($lastMonthStats->count > 0) {
+                $transactionGrowth = (($thisMonthStats->count - $lastMonthStats->count) / $lastMonthStats->count) * 100;
+            }
+
+            // 2. Pelanggan Aktif
+            $activeCustomersCount = Customer::where('tenant_id', $tenantId)->count();
+
+            // 3. Peringatan Stok Rendah
+            $lowStockCount = Product::where('tenant_id', $tenantId)
+                ->whereColumn('stock', '<=', 'min_stock_threshold')
+                ->count();
+
+            // 4. Grafik Penjualan 30 Hari Terakhir
+            $thirtyDaysAgo = Carbon::now()->subDays(29)->startOfDay();
+            $salesTrendRaw = Transaction::where('tenant_id', $tenantId)
+                ->where('status', 'completed')
+                ->where('created_at', '>=', $thirtyDaysAgo)
+                ->selectRaw('DATE(created_at) as date, SUM(total_amount) as total_sales')
+                ->groupBy('date')
+                ->orderBy('date', 'asc')
+                ->get()
+                ->pluck('total_sales', 'date')
+                ->toArray();
+
+            // Isi tanggal yang kosong dengan 0
+            $salesTrend = [];
+            for ($i = 29; $i >= 0; $i--) {
+                $dateString = Carbon::now()->subDays($i)->format('Y-m-d');
+                $salesTrend[] = [
+                    'date' => $dateString,
+                    'sales' => (float) ($salesTrendRaw[$dateString] ?? 0)
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'revenue' => [
+                        'total' => (float) $thisMonthStats->revenue,
+                        'growth' => round($revenueGrowth, 1)
+                    ],
+                    'transactions' => [
+                        'total' => (int) $thisMonthStats->count,
+                        'growth' => round($transactionGrowth, 1)
+                    ],
+                    'customers' => [
+                        'total' => $activeCustomersCount,
+                        'growth' => 0 // Bisa dihitung dari kohort, untuk simplifikasi kita set 0 dulu
+                    ],
+                    'inventory' => [
+                        'low_stock_count' => $lowStockCount
+                    ],
+                    'sales_trend' => $salesTrend
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat metrik dashboard: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * GET /analytics/rfm
      * Mengambil data analitik RFM pelanggan
