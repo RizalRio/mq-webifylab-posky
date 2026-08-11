@@ -22,7 +22,16 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Transaction::with(['customer', 'cashier', 'items.itemable', 'items.rentalBooking', 'items.serviceSchedule']);
+        $query = Transaction::with([
+            'customer:id,name,phone',
+            'cashier:id,name',
+            'items' => function ($q) {
+                $q->select('id', 'transaction_id', 'itemable_type', 'itemable_id', 'quantity', 'unit_price', 'subtotal');
+            },
+            'items.itemable:id,name',
+            'items.rentalBooking:id,transaction_item_id,start_date,end_date,actual_return_date,late_fee',
+            'items.serviceSchedule:id,transaction_item_id,scheduled_start,scheduled_end,status',
+        ]);
 
         if ($request->filled('search')) {
             $search = trim($request->search);
@@ -46,9 +55,11 @@ class TransactionController extends Controller
         $order = $request->input('order', 'desc');
         $query->orderBy($sort, $order === 'asc' ? 'asc' : 'desc');
 
-        // Ringkasan metrik statistik transaksional
-        $totalRevenue = (float) (clone $query)->sum('total_amount');
-        $totalRentals = (clone $query)->whereIn('type', ['rental', 'mixed'])->count();
+        // Ringkasan metrik statistik transaksional (1 query tunggal)
+        $summary = (clone $query)
+            ->selectRaw("COUNT(*) as total_count, COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(*) FILTER (WHERE type IN ('rental', 'mixed')) as total_rentals")
+            ->reorder()
+            ->first();
 
         $transactions = $query->paginate($request->input('per_page', 20));
 
@@ -56,9 +67,9 @@ class TransactionController extends Controller
             'success' => true,
             'data' => $transactions->items(),
             'summary' => [
-                'total_count' => $transactions->total(),
-                'total_revenue' => $totalRevenue,
-                'total_rentals' => $totalRentals,
+                'total_count' => (int) ($summary->total_count ?? 0),
+                'total_revenue' => (float) ($summary->total_revenue ?? 0),
+                'total_rentals' => (int) ($summary->total_rentals ?? 0),
             ],
             'meta' => [
                 'page' => $transactions->currentPage(),
