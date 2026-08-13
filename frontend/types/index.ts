@@ -5,7 +5,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export type Role = "ADMIN" | "KASIR" | "PAKAR";
+export type Role = "ADMIN" | "KASIR" | "PAKAR" | "admin" | "kasir" | "cashier" | string;
 
 export interface User {
   id: string | number;

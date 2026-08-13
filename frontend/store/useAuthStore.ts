@@ -9,6 +9,7 @@ interface AuthState {
 
   // Actions
   setAuth: (user: User, token: string) => void;
+  setUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -25,6 +26,10 @@ export const useAuthStore = create<AuthState>()(
           document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
         }
         set({ user, token, isAuthenticated: true });
+      },
+
+      setUser: (user) => {
+        set({ user });
       },
 
       logout: () => {

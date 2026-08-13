@@ -26,6 +26,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 // Protected Routes (Wajib Bawa Bearer Token)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
 
     // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);

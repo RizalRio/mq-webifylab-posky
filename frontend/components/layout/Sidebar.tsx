@@ -20,6 +20,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface SidebarProps {
   isMobileOpen: boolean;
@@ -49,6 +50,10 @@ interface NavSection {
 export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuthStore();
+
+  const roleUpper = (user?.role || "").toString().toUpperCase();
+  const isCashier = roleUpper === "KASIR" || roleUpper === "CASHIER";
 
   // State untuk melacak sub-menu mana yang terbuka
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
@@ -139,7 +144,29 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
     },
   ];
 
-  // Buka sub-menu secara otomatis jika anak menu-nya sedang aktif
+  // Filter navSections jika user adalah Kasir
+  const filteredNavSections = navSections
+    .map((section) => {
+      if (!isCashier) return section;
+
+      // Kasir hanya melihat POS, Riwayat Transaksi, dan Katalog Produk
+      const filteredItems = section.items
+        .map((item) => {
+          if (!item.children) {
+            return item.href === "/pos" || item.href === "/transaksi" || item.href === "/katalog"
+              ? item
+              : null;
+          }
+          const validChildren = item.children.filter(
+            (c) => c.href === "/pos" || c.href === "/transaksi" || c.href === "/katalog"
+          );
+          return validChildren.length > 0 ? { ...item, children: validChildren } : null;
+        })
+        .filter(Boolean) as NavItem[];
+
+      return filteredItems.length > 0 ? { ...section, items: filteredItems } : null;
+    })
+    .filter(Boolean) as NavSection[];
   useEffect(() => {
     navSections.forEach((section) => {
       section.items.forEach((item) => {
@@ -191,7 +218,7 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
 
         {/* Menu Navigasi Sub-Sub Grouping */}
         <div className="flex-1 p-3 flex flex-col gap-4 overflow-y-auto">
-          {navSections.map((section) => (
+          {filteredNavSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               <p
                 className={`px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-wider uppercase ${
@@ -342,12 +369,12 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                POSKY Demo Store
+                {(user as any)?.tenant?.name || "POSKY Omnichannel Store"}
               </p>
               <div className="flex items-center gap-1 mt-0.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                  demo.posky.com
+                  {(user as any)?.tenant?.subdomain ? `${(user as any).tenant.subdomain}.posky.com` : "demo.posky.com"}
                 </span>
               </div>
             </div>

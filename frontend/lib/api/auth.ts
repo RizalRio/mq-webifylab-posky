@@ -4,7 +4,6 @@ import type { LoginCredentials, AuthResponse, ApiResponse } from "@/types";
 export const authApi = {
   // Fungsi untuk Login
   login: async (credentials: LoginCredentials) => {
-    // Menembak ke endpoint http://localhost:8080/api/v1/auth/login
     const response = await apiClient.post<ApiResponse<AuthResponse>>(
       "/auth/login",
       credentials,
@@ -18,7 +17,13 @@ export const authApi = {
     return response.data;
   },
 
-  // Fungsi untuk Register (opsional jika pembuatan akun hanya via Admin)
+  // Fungsi untuk Logout
+  logout: async () => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>("/auth/logout");
+    return response.data;
+  },
+
+  // Fungsi untuk Register
   register: async (data: any) => {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(
       "/auth/register",

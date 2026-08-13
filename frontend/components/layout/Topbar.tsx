@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Search, User, Menu, LogOut, Sun, Moon, Store, Sparkles, ShoppingBag, Wrench, PackageCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { authApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 
 export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
@@ -35,9 +36,15 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.warn("Backend logout warning:", err);
+    } finally {
+      logout();
+      router.push("/login");
+    }
   };
 
   return (
@@ -64,7 +71,7 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="System Online"></span>
             </div>
             <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[130px] sm:max-w-none">
-              POSKY Demo Store
+              {(user as any)?.tenant?.name || "POSKY Omnichannel Store"}
             </span>
           </div>
         </div>
