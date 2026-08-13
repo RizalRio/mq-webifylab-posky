@@ -66,6 +66,10 @@ export interface BackendTransaction {
     phone?: string;
     email?: string;
   };
+  cashier?: {
+    id: string;
+    name: string;
+  };
   items: BackendTransactionItem[];
 }
 

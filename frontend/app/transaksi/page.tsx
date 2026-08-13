@@ -30,6 +30,7 @@ import {
 import { transactionsApi, type BackendTransaction } from "@/lib/api/transactions";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ReturnRentalModal } from "@/components/transaksi/ReturnRentalModal";
+import { ReceiptPrintModal } from "@/components/transaksi/ReceiptPrintModal";
 
 const formatRupiah = (angka: number) => {
   return new Intl.NumberFormat("id-ID", {
@@ -56,6 +57,7 @@ export default function TransaksiPage() {
   const [selectedPayment, setSelectedPayment] = useState<string>("ALL");
   const [viewingTransaction, setViewingTransaction] = useState<BackendTransaction | null>(null);
   const [returningTransaction, setReturningTransaction] = useState<BackendTransaction | null>(null);
+  const [printingTransaction, setPrintingTransaction] = useState<BackendTransaction | null>(null);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
@@ -295,6 +297,13 @@ export default function TransaksiPage() {
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            onClick={() => setPrintingTransaction(trx)}
+                            className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded-lg transition-colors"
+                            title="Cetak Struk Thermal"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => setViewingTransaction(trx)}
                             className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
                             title="Lihat Detail Struk"
@@ -395,10 +404,10 @@ export default function TransaksiPage() {
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => setPrintingTransaction(viewingTransaction)}
                 className="inline-flex items-center gap-2 border-slate-300 dark:border-slate-700"
               >
-                <Printer className="h-4 w-4" /> Cetak Nota
+                <Printer className="h-4 w-4 text-indigo-600" /> Cetak Nota Kasir
               </Button>
               <Button
                 onClick={() => setViewingTransaction(null)}
@@ -416,6 +425,13 @@ export default function TransaksiPage() {
         isOpen={!!returningTransaction}
         onClose={() => setReturningTransaction(null)}
         transaction={returningTransaction}
+      />
+
+      {/* MODAL CETAK STRUK THERMAL & PDF */}
+      <ReceiptPrintModal
+        isOpen={!!printingTransaction}
+        onClose={() => setPrintingTransaction(null)}
+        transaction={printingTransaction}
       />
     </div>
   );

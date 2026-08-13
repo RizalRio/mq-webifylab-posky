@@ -34,6 +34,7 @@ import {
   Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ReceiptPrintModal } from "@/components/transaksi/ReceiptPrintModal";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -68,6 +69,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [cashAmount, setCashAmount] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [completedTransaction, setCompletedTransaction] = useState<BackendTransaction | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Fetch list customer
   const { data: customersResponse } = useQuery({
@@ -235,10 +237,10 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => setIsPrintModalOpen(true)}
                 className="inline-flex items-center gap-2 border-slate-300 dark:border-slate-700"
               >
-                <Printer className="h-4 w-4" /> Cetak Struk
+                <Printer className="h-4 w-4 text-indigo-600" /> Cetak Struk Kasir
               </Button>
               <Button
                 onClick={handleClose}
@@ -465,6 +467,14 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
           </>
         )}
       </DialogContent>
+
+      {/* RECEIPT PRINT MODAL */}
+      <ReceiptPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        transaction={completedTransaction}
+        cashAmount={cashAmount}
+      />
     </Dialog>
   );
 }
