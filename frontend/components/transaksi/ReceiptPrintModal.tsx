@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Store, QrCode, CheckCircle2 } from "lucide-react";
 import type { BackendTransaction } from "@/lib/api/transactions";
+import { settingsApi } from "@/lib/api/settings";
 
 interface ReceiptPrintModalProps {
   isOpen: boolean;
@@ -45,6 +47,13 @@ export function ReceiptPrintModal({
   cashAmount,
 }: ReceiptPrintModalProps) {
   const [paperSize, setPaperSize] = useState<"58mm" | "80mm">("58mm");
+
+  const { data: settings } = useQuery({
+    queryKey: ["tenant-settings"],
+    queryFn: settingsApi.getSettings,
+    enabled: isOpen,
+    staleTime: 60 * 1000,
+  });
 
   if (!transaction) return null;
 
@@ -109,9 +118,15 @@ export function ReceiptPrintModal({
           >
             {/* HEADER TOKO */}
             <div className="text-center space-y-1 pb-2 border-b border-dashed border-slate-400">
-              <p className="font-bold text-sm uppercase tracking-wide">POSKY STORE</p>
-              <p className="text-[10px] text-slate-700">Jl. Teknologi No. 88, Jakarta</p>
-              <p className="text-[10px] text-slate-700">Telp: 0812-3456-7890</p>
+              <p className="font-bold text-sm uppercase tracking-wide">
+                {settings?.name || "POSKY STORE"}
+              </p>
+              <p className="text-[10px] text-slate-700">
+                {settings?.address || "Jl. Teknologi No. 88, Jakarta"}
+              </p>
+              {settings?.phone && (
+                <p className="text-[10px] text-slate-700">Telp: {settings.phone}</p>
+              )}
             </div>
 
             {/* METADATA TRANSAKSI */}
@@ -207,7 +222,9 @@ export function ReceiptPrintModal({
                 <QrCode className="h-10 w-10 text-slate-800" />
               </div>
               <p className="font-semibold">*** TERIMA KASIH ***</p>
-              <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.</p>
+              <p className="whitespace-pre-line">
+                {settings?.receipt_footer || "Barang yang sudah dibeli tidak dapat ditukar/dikembalikan."}
+              </p>
               <p className="text-[8px] opacity-70">Powered by POSKY Omnichannel</p>
             </div>
           </div>

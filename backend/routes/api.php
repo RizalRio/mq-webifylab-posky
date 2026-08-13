@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\SupplierEvaluationController;
 use App\Http\Controllers\Api\AhpController;
 use App\Http\Controllers\Api\ProphetController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\SettingController;
 
 // Public Routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -27,6 +28,10 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+
+    // Store & POS Settings
+    Route::get('/settings', [SettingController::class, 'show']);
+    Route::put('/settings', [SettingController::class, 'update']);
 
     // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);

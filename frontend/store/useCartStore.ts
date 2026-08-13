@@ -26,6 +26,7 @@ interface CartState {
   total: number;
   discount: number;
   depositPaid: number;
+  taxRate: number;
   selectedCustomerId: string | null;
   paymentMethod: "cash" | "qris" | "transfer";
 
@@ -42,6 +43,7 @@ interface CartState {
   updateQuantity: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   setDiscount: (discount: number) => void;
+  setTaxRate: (taxRate: number) => void;
   setDepositPaid: (deposit: number) => void;
   setSelectedCustomerId: (customerId: string | null) => void;
   setPaymentMethod: (method: "cash" | "qris" | "transfer") => void;
@@ -49,11 +51,9 @@ interface CartState {
   clearCart: () => void;
 }
 
-const TAX_RATE = 0.11;
-
-const recalculateTotals = (items: ExtendedCartItem[], discount = 0) => {
+const recalculateTotals = (items: ExtendedCartItem[], discount = 0, taxRate = 11) => {
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
-  const tax = subtotal * TAX_RATE;
+  const tax = subtotal * (taxRate / 100);
   const total = Math.max(0, subtotal - discount + tax);
   return { subtotal, tax, total };
 };
@@ -65,6 +65,7 @@ export const useCartStore = create<CartState>((set) => ({
   total: 0,
   discount: 0,
   depositPaid: 0,
+  taxRate: 11,
   selectedCustomerId: null,
   paymentMethod: "cash",
 
@@ -107,7 +108,7 @@ export const useCartStore = create<CartState>((set) => ({
         ];
       }
 
-      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount);
+      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount, state.taxRate);
       return { items: newItems, subtotal, tax, total };
     }),
 
@@ -128,21 +129,27 @@ export const useCartStore = create<CartState>((set) => ({
         })
         .filter(Boolean) as ExtendedCartItem[];
 
-      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount);
+      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount, state.taxRate);
       return { items: newItems, subtotal, tax, total };
     }),
 
   removeItem: (id) =>
     set((state) => {
       const newItems = state.items.filter((item) => item.id !== id);
-      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount);
+      const { subtotal, tax, total } = recalculateTotals(newItems, state.discount, state.taxRate);
       return { items: newItems, subtotal, tax, total };
     }),
 
   setDiscount: (discount) =>
     set((state) => {
-      const { subtotal, tax, total } = recalculateTotals(state.items, discount);
+      const { subtotal, tax, total } = recalculateTotals(state.items, discount, state.taxRate);
       return { discount, subtotal, tax, total };
+    }),
+
+  setTaxRate: (taxRate) =>
+    set((state) => {
+      const { subtotal, tax, total } = recalculateTotals(state.items, state.discount, taxRate);
+      return { taxRate, subtotal, tax, total };
     }),
 
   setDepositPaid: (depositPaid) => set({ depositPaid }),
@@ -159,7 +166,7 @@ export const useCartStore = create<CartState>((set) => ({
     })),
 
   clearCart: () =>
-    set({
+    set((state) => ({
       items: [],
       subtotal: 0,
       tax: 0,
@@ -168,5 +175,5 @@ export const useCartStore = create<CartState>((set) => ({
       depositPaid: 0,
       selectedCustomerId: null,
       paymentMethod: "cash",
-    }),
+    })),
 }));

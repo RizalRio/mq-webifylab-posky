@@ -18,6 +18,7 @@ import {
   Receipt,
   Layers,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -139,6 +140,16 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
               badge: "Insight",
             },
           ],
+        },
+      ],
+    },
+    {
+      title: "SISTEM & PENGATURAN",
+      items: [
+        {
+          label: "Pengaturan Toko",
+          href: "/pengaturan",
+          icon: Settings,
         },
       ],
     },

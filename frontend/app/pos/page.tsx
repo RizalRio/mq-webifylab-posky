@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   Search,
@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/useCartStore";
 import { productsApi } from "@/lib/api/products";
+import { settingsApi } from "@/lib/api/settings";
 import { useDebounce } from "@/hooks/useDebounce";
 import { CheckoutModal } from "@/components/pos/CheckoutModal";
 import type { BusinessMode } from "@/types";
@@ -42,13 +43,36 @@ const formatRupiah = (angka: number) => {
 };
 
 export default function POSPage() {
-  const { items, subtotal, tax, total, addItem, updateQuantity, removeItem, clearCart } =
-    useCartStore();
+  const {
+    items,
+    subtotal,
+    tax,
+    taxRate,
+    total,
+    addItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    setTaxRate,
+  } = useCartStore();
   const [selectedMode, setSelectedMode] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isCheckoutOpen, setIsCheckoutOpen] = useState<boolean>(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Fetch Settings for Tax %
+  const { data: tenantSettings } = useQuery({
+    queryKey: ["tenant-settings"],
+    queryFn: settingsApi.getSettings,
+    staleTime: 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (tenantSettings?.tax_percentage !== undefined) {
+      setTaxRate(Number(tenantSettings.tax_percentage));
+    }
+  }, [tenantSettings, setTaxRate]);
 
   // 1. Query Products (BARANG)
   const { data: productsData, isLoading: isLoadingProducts, isFetching: isFetchingProducts } = useQuery({
@@ -376,7 +400,7 @@ export default function POSPage() {
             </span>
           </div>
           <div className="flex items-center justify-between text-xs lg:text-sm text-slate-600 dark:text-slate-400">
-            <span>Pajak (PPN 11%)</span>
+            <span>Pajak (PPN {taxRate}%)</span>
             <span className="font-tabular tabular-nums font-semibold text-slate-900 dark:text-slate-100">
               {formatRupiah(tax)}
             </span>
