@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💻 POSKY Frontend Web Application (Next.js 16 App Router)
 
-## Getting Started
+Aplikasi Web Frontend Dashboard & Kasir POS untuk **POSKY (Hybrid SaaS POS System)** — Dibangun dengan desain modern, cepat, dan reaktif menggunakan **Next.js 16, React 19, TypeScript, Tailwind CSS, TanStack React Query, dan Recharts**.
 
-First, run the development server:
+---
+
+## 🎨 Modul & Fitur Utama Antarmuka
+
+1. **Dashboard Utama (`/`)**:
+   - Ringkasan metrik realtime (Total Pendapatan, Transaksi, Pelanggan Aktif, Peringatan Stok).
+   - Grafik tren penjualan 30 hari terakhir (Recharts) dengan pemformatan Rupiah (`IDR`).
+2. **Modul Kasir POS (`/pos`)**:
+   - Pemilihan item barang, jasa, dan persewaan dalam satu keranjang universal.
+   - Perhitungan otomatis PPN % dinamis (sesuai setting toko) dan diskon.
+   - Form tanggal sewa & jadwal teknisi jasa.
+   - **Pratinjau Struk Kasir Thermal (58mm / 80mm)** dengan isolasi `@media print`.
+3. **Riwayat Transaksi & Pengembalian (`/transaksi`)**:
+   - Tabel laporan transaksi faktur dengan filter pencarian dan tipe pembayaran.
+   - Modal Pengembalian Sewa dengan kalkulasi denda otomatis.
+   - Tombol cetak cepat struk thermal per baris transaksi.
+4. **Analitik Pelanggan Lanjutan (`/pelanggan/analitik`)**:
+   - Grafik Bar Chart Distribusi Segmen RFM (*Champions*, *Loyal*, *At Risk*, *Hibernating*).
+   - Matriks *Heatmap* **Cohort Analysis** retensi pelanggan per kohort bulan.
+   - Leaderboard Top Pelanggan berdasarkan skor RFM.
+5. **Pengaturan Toko & POS (`/pengaturan`)**:
+   - Form identitas toko, nomor telepon, alamat lengkap, PPN %, diskon default, dan ucapan footer struk thermal.
+6. **Autentikasi & Otorisasi RBAC (`/login`)**:
+   - Form Login terintegrasi Sanctum Token & Cookie.
+   - Tombol pintas 1-Click Demo Login untuk **Admin** dan **Kasir**.
+   - Penapis (*filter*) menu navigasi otomatis sesuai peran user (`ADMIN` vs `KASIR`).
+
+---
+
+## 🛠️ Teknologi & Stack Frontend
+
+- **Framework**: Next.js 16.3 (Turbopack, App Router)
+- **UI & Icon**: Tailwind CSS, Lucide Icons, Shadcn UI Components
+- **State & Query**: TanStack React Query v5, Zustand (Auth & Cart Store)
+- **Data Visualization**: Recharts
+- **HTTP Client**: Axios dengan Interceptor Auth & Auto-logout 401
+- **Notification**: Sonner Toast
+
+---
+
+## 🚀 Panduan Setup & Jalankan Frontend
+
+### 1. Prasyarat System
+- Node.js >= 18.x
+- npm atau yarn
+
+### 2. Langkah Instalasi
 
 ```bash
+# 进入 folder frontend
+cd frontend
+
+# Install dependensi npm
+npm install
+
+# Buat file konfigurasi .env.local
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+
+# Jalankan server pengembangan lokal (Dev Mode)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aplikasi frontend akan berjalan di `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Build Produksi
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Jalankan kompilasi TypeScript & build Next.js
+npm run build
 
-## Learn More
+# Jalankan server hasil build
+npm run start
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📝 Struktur Folder Utama Frontend
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+frontend/
+├── app/                  # Next.js App Router (page, layout, route)
+│   ├── (auth)/login/     # Halaman Login
+│   ├── pelanggan/        # Daftar Pelanggan & Analitik RFM/Cohort
+│   ├── pos/              # Kasir Checkout POS
+│   ├── stok/             # Riwayat & Mutasi Stok
+│   ├── transaksi/        # Riwayat Faktur Transaksi
+│   └── pengaturan/       # Pengaturan Profil Toko & PPN
+├── components/           # Reusable UI & Modal Components
+│   ├── dashboard/        # ProphetChart & Metrics
+│   ├── layout/           # Sidebar, Topbar, AppShell
+│   ├── pelanggan/        # RfmDistributionChart, CohortHeatmap
+│   ├── pos/              # CheckoutModal
+│   └── transaksi/        # ReceiptPrintModal, ReturnRentalModal
+├── hooks/                # Custom React Hooks (useDebounce, dsb)
+├── lib/                  # API Clients & Axios Configuration
+├── store/                # Zustand Global State (useAuthStore, useCartStore)
+└── types/                # TypeScript Interfaces & Models
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 Lisensi
+Hak Cipta © 2026 POSKY Omnichannel SaaS System.

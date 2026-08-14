@@ -1,59 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🚀 POSKY Backend Service (Laravel 11 REST API)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend Service untuk **POSKY (Hybrid SaaS POS System)** — Sistem Point of Sale (POS) Omnichannel yang mendukung transaksi **Barang, Jasa, dan Persewaan (Rentals)** dalam satu faktur transaksi kasir, dilengkapi dengan **Analitik RFM, Cohort Analysis, dan Otorisasi Role Multi-Tenant**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🛠️ Teknologi & Arsitektur Backend
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Framework**: Laravel 11 (PHP 8.2+)
+- **Database**: PostgreSQL dengan Optimasi Composite Indexes & CTE (*Common Table Expressions*)
+- **Autentikasi**: Laravel Sanctum (Bearer Token & Cookie Session)
+- **Asinkron & Queue**: Redis Server & Laravel Queues
+- **Keamanan**: Pessimistic Locking (`lockForUpdate()`), Brute-force Rate Limiting, & Tenant Isolation Guard
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## ⚙️ Fitur Utama API
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. **Universal Transaction Engine (`TransactionController`)**:
+   - Polimorfik checkout untuk Barang, Jasa, dan Persewaan.
+   - Pengurangan stok otomatis, pembuatan jadwal teknisi jasa, dan reservasi unit sewa.
+   - Endpoint khusus pengembalian sewa (`POST /transactions/{id}/return`) dengan perhitungan denda terlambat otomatis.
+2. **Analitik & Dashboard (`AnalyticsController`)**:
+   - `GET /analytics/dashboard`: Omzet harian, transaksi, pelanggan aktif, dan tren penjualan 30 hari.
+   - `GET /analytics/rfm`: Perhitungan skor Recency, Frequency, & Monetary pelanggan.
+   - `GET /analytics/cohort`: Matriks retensi transaksi pelanggan menggunakan PostgreSQL CTE.
+3. **Autentikasi & Profile (`AuthController`)**:
+   - `POST /auth/login`: Autentikasi user & penerbitan token Sanctum.
+   - `GET /auth/me`: Hidrasi data profil user & identitas tenant toko.
+   - `POST /auth/logout`: Revokasi token Sanctum.
+4. **Pengaturan Toko & POS (`SettingController`)**:
+   - `GET /settings` & `PUT /settings`: Konfigurasi nama toko, alamat, persentase PPN %, dan footer struk thermal.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 🚀 Panduan Setup & Instalasi Backend
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 1. Prasyarat System
+- PHP >= 8.2 dengan ekstensi `pdo_pgsql`, `redis`, `mbstring`, `bcmath`.
+- PostgreSQL Database Server.
+- Composer.
 
-### Premium Partners
+### 2. Langkah Setup
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+# 进入 folder backend
+cd backend
 
-## Contributing
+# Install dependensi PHP
+composer install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Salin file environment
+cp .env.example .env
 
-## Code of Conduct
+# Generate Application Key
+php artisan key:generate
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Konfigurasi koneksi PostgreSQL pada .env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=posky_db
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
 
-## Security Vulnerabilities
+# Jalankan migrasi database & seeder
+php artisan migrate --seed
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Jalankan server lokal (Gunakan --no-reload untuk stabilitas worker)
+php artisan serve --no-reload
+```
 
-## License
+Server backend REST API akan berjalan di `http://localhost:8000`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 📄 Ringkasan Endpoint Utama API
+
+| Method | Endpoint | Deskripsi | Access |
+|--------|----------|-----------|--------|
+| `POST` | `/api/auth/login` | Login user & dapatkan token | Public |
+| `GET` | `/api/auth/me` | Dapatkan profil user & tenant | Auth |
+| `POST` | `/api/auth/logout` | Revokasi session token | Auth |
+| `GET` | `/api/analytics/dashboard` | Summary metrik dashboard 30 hari | Auth |
+| `GET` | `/api/analytics/rfm` | Data segmen & skor RFM pelanggan | Auth |
+| `GET` | `/api/analytics/cohort` | Matriks retensi Cohort Analysis | Auth |
+| `GET` | `/api/transactions` | Daftar faktur riwayat transaksi | Auth |
+| `POST` | `/api/transactions` | Checkout faktur universal POS | Auth |
+| `POST` | `/api/transactions/{id}/return` | Pengembalian sewa & kalkulasi denda | Auth |
+| `GET` | `/api/products` | Katalog barang & produk fisik | Auth |
+| `GET` | `/api/services` | Katalog layanan jasa teknisi | Auth |
+| `GET` | `/api/rental-items` | Katalog item sewa & unit aset | Auth |
+| `GET` | `/api/settings` | Konfigurasi profil toko & PPN | Auth |
+| `PUT` | `/api/settings` | Update profil toko & footer struk | Auth |
+
+---
+
+## 📝 Lisensi
+Hak Cipta © 2026 POSKY Omnichannel SaaS System.
