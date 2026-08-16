@@ -52,7 +52,6 @@ class ProphetController extends Controller
             // Diurutkan berdasarkan tanggal habis terdekat (ascending)
             $predictions = StockPrediction::with('product:id,name,stock')
                 ->where('tenant_id', $tenantId)
-                ->whereNotNull('estimated_stockout_date')
                 ->orderBy('estimated_stockout_date', 'asc')
                 ->get();
 

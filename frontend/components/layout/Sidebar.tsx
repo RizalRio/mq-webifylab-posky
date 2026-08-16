@@ -19,6 +19,7 @@ import {
   Layers,
   BarChart3,
   Settings,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -140,6 +141,11 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
               badge: "Insight",
             },
           ],
+        },
+        {
+          label: "Supplier & AHP",
+          href: "/supplier",
+          icon: Truck,
         },
       ],
     },

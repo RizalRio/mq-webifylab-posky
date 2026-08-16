@@ -100,7 +100,7 @@ def process_prophet_task(tenant_id):
                 JOIN transactions t ON ti.transaction_id = t.id
                 WHERE t.tenant_id = :tid 
                   AND ti.itemable_id = :pid 
-                  AND ti.itemable_type = 'App\\Models\\Product' 
+                  AND (ti.itemable_type LIKE '%Product%' OR ti.itemable_type = 'product')
                 GROUP BY DATE(t.created_at)
                 ORDER BY DATE(t.created_at) ASC
             """)
