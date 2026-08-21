@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\AhpController;
 use App\Http\Controllers\Api\ProphetController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\ReportController;
 
 // Public Routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -69,6 +70,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('ahp/calculate', [AhpController::class, 'triggerCalculation']);
 
     // Analytics & Reports
+    Route::prefix('reports')->group(function () {
+        Route::get('/sales', [ReportController::class, 'sales']);
+        Route::get('/items', [ReportController::class, 'items']);
+        Route::get('/export-pdf', [ReportController::class, 'exportPdf']);
+    });
+
     Route::prefix('analytics')->group(function () {
         Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
         Route::get('/rfm', [AnalyticsController::class, 'rfm']);

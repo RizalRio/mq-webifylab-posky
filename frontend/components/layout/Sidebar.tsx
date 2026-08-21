@@ -78,6 +78,11 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           icon: LayoutDashboard,
           badge: "AI",
         },
+        {
+          label: "Laporan & Ekspor",
+          href: "/laporan",
+          icon: FileText,
+        },
       ],
     },
     {
