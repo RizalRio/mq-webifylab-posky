@@ -39,7 +39,7 @@ apiClient.interceptors.response.use(
 
       // Arahkan paksa ke halaman login tanpa import next/router
       if (typeof window !== "undefined" && window.location.pathname !== "/login") {
-        window.location.href = "/login";
+        window.location.href = "/login?clear_session=true";
       }
     }
     return Promise.reject(error);

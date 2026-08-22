@@ -43,7 +43,7 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
       console.warn("Backend logout warning:", err);
     } finally {
       logout();
-      router.push("/login");
+      window.location.href = "/login?clear_session=true";
     }
   };
 

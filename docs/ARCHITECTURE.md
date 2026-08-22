@@ -124,6 +124,51 @@ CREATE TABLE transactions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 -- Index Wajib: CREATE INDEX idx_transactions_tenant_date ON transactions(tenant_id, created_at);
+
+-- Tabel Master DSS AHP
+CREATE TABLE suppliers (
+    id UUID PRIMARY KEY,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    ahp_score DECIMAL(8,4) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE criteria (
+    id UUID PRIMARY KEY,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL, -- 'cost', 'benefit'
+    weight DECIMAL(8,4) DEFAULT 0
+);
+
+-- Tabel Relasi DSS AHP
+CREATE TABLE criterion_comparisons (
+    id UUID PRIMARY KEY,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    criterion_id_1 UUID REFERENCES criteria(id) ON DELETE CASCADE,
+    criterion_id_2 UUID REFERENCES criteria(id) ON DELETE CASCADE,
+    value DECIMAL(10,4) NOT NULL
+);
+
+CREATE TABLE supplier_evaluations (
+    id UUID PRIMARY KEY,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    supplier_id UUID REFERENCES suppliers(id) ON DELETE CASCADE,
+    criterion_id UUID REFERENCES criteria(id) ON DELETE CASCADE,
+    raw_value DECIMAL(15,4) NOT NULL
+);
+
+-- Tabel AI Prophet & Inventory
+CREATE TABLE stock_predictions (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    product_id BIGINT REFERENCES products(id) ON DELETE CASCADE,
+    predicted_date DATE NOT NULL,
+    predicted_sales INT NOT NULL,
+    safety_stock INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## 7. 🚀 Infrastructure & Deployment Strategy

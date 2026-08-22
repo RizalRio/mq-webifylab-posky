@@ -9,14 +9,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Cek apakah ini halaman autentikasi
+  // Cek apakah ini halaman autentikasi atau landing page
   const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isLandingPage = pathname === "/";
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Jika ini halaman Login, JANGAN tampilkan Topbar & Sidebar
+  // Jika ini halaman Landing Page, tampilkan tanpa padding dan flex centering
+  if (isLandingPage) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors">
+        {children}
+      </div>
+    );
+  }
+
+  // Jika ini halaman Login, JANGAN tampilkan Topbar & Sidebar (tapi beri centering)
   if (isAuthPage) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">

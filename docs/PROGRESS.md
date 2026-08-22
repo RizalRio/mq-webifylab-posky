@@ -22,8 +22,11 @@
 * [x] Analytics Dashboard (RFM & Cohort)
 
 **Fase 3: Frontend & Testing (🔄 DALAM PROGRES)**
-* [ ] Testing & Documentation
-* [ ] Frontend (Next.js Web & Flutter/Riverpod Mobile)
+* [x] Testing & Documentation (Integration Tests for AI Workers)
+* [x] Frontend (Dashboard, Routing, Autentikasi)
+* [x] Frontend (Integrasi UI DSS Supplier / AHP)
+* [ ] Frontend (Modul Katalog, Kasir, dan Analitik Lainnya)
+* [ ] Mobile App (Flutter/Riverpod)
 
 ---
 
@@ -77,29 +80,33 @@
 ---
 
 ## 6. 🧪 Testing & Documentation
-### Status: ⏳ BELUM DIMULAI
+### Status: 🔄 DALAM PROGRES (Unit & Integration ✅)
 
-* **Testing:** Cakupan Unit Testing dan Integration Testing untuk memvalidasi isolasi *multi-tenant* dan integrasi *worker* AI.
-* **Dokumentasi:** Penyusunan API Docs (Swagger/OpenAPI), instruksi *deployment*, dan rekaman arsitektur (ADR).
+* **Testing:** Telah menyelesaikan *Integration Testing* memvalidasi koneksi Redis dan Python Worker (`AhpIntegrationTest.php`, `ProphetIntegrationTest.php`) menggunakan memori SQLite yang sepenuhnya fungsional.
+* **Dokumentasi:** Penyusunan API Docs dan sinkronisasi status progres.
 
 ---
 
 ## 7. 🎨 Fase 3: Frontend
-### Status: ⏳ BELUM DIMULAI
+### Status: 🔄 DALAM PROGRES
 
-* **Persiapan Platform:** Inisialisasi basis kode untuk Web *dashboard* (Next.js + Tailwind CSS) dan aplikasi *mobile* POS (Flutter/Riverpod).
-* **Integrasi Autentikasi:** Penerapan alur keamanan Sanctum hingga penanganan sesi per level *tenant*.
-* **Konsumsi API AI:** Pembuatan panel visual interaktif untuk menyajikan rekomendasi AHP, grafik *forecast* Prophet, dan tabel analisis pelanggan.
+* **Persiapan Platform:** Web *dashboard* (Next.js + Tailwind CSS + Zustand + React Query) terpasang dengan *layouting* Sidebar dinamis.
+* **Integrasi Autentikasi:** Alur *login* dan perlindungan rute menggunakan Next.js Middleware dan `useAuthStore` selesai. Masalah *redirect loop* pada saat sesi habis berhasil ditangani.
+* **Konsumsi API AI:** Pembuatan panel interaktif **Evaluasi Supplier (AHP)** telah selesai. Komponen kustom seperti `EvaluationInputCell` dikembangkan untuk *parsing* angka desimal dinamis (Harga/Waktu/Kualitas) secara elegan. Panel Prophet dan RFM menyusul.
 
 ---
 
 ## 📝 Notes & Next Steps
 
 **✅ Completed Milestones:**
-Fase 1 (Core Sistem) dan Fase 2 (AI & Analytics) telah selesai 100%. Infrastruktur asinkron, modul DSS AHP, peramalan stok Prophet, dan algoritma analitik kompleks (RFM & Cohort) telah sukses diintegrasikan ke dalam lingkungan *backend* API.
+Fase 1 (Core Sistem) dan Fase 2 (AI & Analytics) telah selesai 100%. Infrastruktur asinkron, modul DSS AHP, peramalan stok Prophet, dan algoritma analitik kompleks (RFM & Cohort) telah diintegrasikan. *Backend Testing* juga telah selesai untuk memastikan jalur pipa AI berfungsi dengan mulus.
 
 **🎯 Immediate Next Step:**
-Memasuki **Fase 3: Frontend & Testing**. Prioritas selanjutnya adalah merancang arsitektur pengujian (*Unit/Integration Testing*) di Laravel untuk memastikan keandalan sistem multi-tenant sebelum beralih ke pembuatan antarmuka pengguna (UI) di lingkungan Next.js / Flutter.
+Melanjutkan penyelesaian antarmuka pengguna (UI) di Fase 3. Modul yang akan dikerjakan berikutnya adalah:
+1. **Modul Katalog Produk (Master Data)**
+2. **Modul Prediksi Stok Prophet**
+3. **Modul Analitik Pelanggan (RFM & Cohort)**
+4. **Modul Kasir (POS)**
 
 ---
 

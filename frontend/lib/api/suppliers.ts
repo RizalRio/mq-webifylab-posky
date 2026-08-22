@@ -33,6 +33,24 @@ export interface SupplierEvaluationInput {
   raw_value: number;
 }
 
+export interface CriterionComparisonInput {
+  criterion_id_1: string;
+  criterion_id_2: string;
+  value: number;
+}
+
+export interface CriterionComparisonData {
+  criterion_id_1: string;
+  criterion_id_2: string;
+  value: number;
+}
+
+export interface SupplierEvaluationData {
+  supplier_id: string;
+  criterion_id: string;
+  raw_value: number;
+}
+
 export const suppliersApi = {
   // GET /suppliers
   getSuppliers: async (): Promise<Supplier[]> => {
@@ -64,13 +82,24 @@ export const suppliersApi = {
   },
 
   // GET /supplier-evaluations
-  getEvaluations: async (): Promise<any[]> => {
-    const response = await apiClient.get<{ success: boolean; data: any[] }>("/supplier-evaluations");
+  getEvaluations: async (): Promise<SupplierEvaluationData[]> => {
+    const response = await apiClient.get<{ success: boolean; data: SupplierEvaluationData[] }>("/supplier-evaluations");
     return response.data.data;
   },
 
   // POST /supplier-evaluations/bulk
   saveEvaluationsBulk: async (evaluations: SupplierEvaluationInput[]): Promise<void> => {
     await apiClient.post("/supplier-evaluations/bulk", { evaluations });
+  },
+
+  // GET /criterion-comparisons
+  getComparisons: async (): Promise<CriterionComparisonData[]> => {
+    const response = await apiClient.get<{ success: boolean; data: CriterionComparisonData[] }>("/criterion-comparisons");
+    return response.data.data;
+  },
+
+  // POST /criterion-comparisons/bulk
+  saveComparisonsBulk: async (comparisons: CriterionComparisonInput[]): Promise<void> => {
+    await apiClient.post("/criterion-comparisons/bulk", { comparisons });
   },
 };

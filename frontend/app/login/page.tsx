@@ -51,7 +51,7 @@ export default function LoginPage() {
     mutationFn: authApi.login,
     onSuccess: (response) => {
       setAuth(response.data.user, response.data.token);
-      router.push("/");
+      router.push("/dashboard");
     },
     onError: (error: any) => {
       const message =

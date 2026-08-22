@@ -59,9 +59,9 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
 
   // State untuk melacak sub-menu mana yang terbuka
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
-    transaksi: true,
-    inventaris: true,
-    modul: true,
+    "modul-transaksi": true,
+    "manajemen-barang": true,
+    "modul-pelanggan": true,
   });
 
   const toggleSubMenu = (key: string) => {
@@ -74,7 +74,7 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
       items: [
         {
           label: "Overview Analitik",
-          href: "/",
+          href: "/dashboard",
           icon: LayoutDashboard,
           badge: "AI",
         },
@@ -252,7 +252,7 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
 
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const menuKey = item.label.toLowerCase().split(" ")[0];
+                const menuKey = item.label.toLowerCase().replace(/\s+/g, "-");
                 const isOpen = openSubMenus[menuKey] ?? false;
 
                 // Cek jika item tunggal tanpa anak

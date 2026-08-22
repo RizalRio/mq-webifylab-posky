@@ -1,418 +1,102 @@
-"use client";
+import Link from "next/link";
+import { ArrowRight, BarChart3, Bot, Sparkles, Store, Zap } from "lucide-react";
 
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  Package,
-  TrendingUp,
-  Users,
-  Calendar,
-  AlertCircle,
-  Sparkles,
-  RefreshCw,
-  Loader2,
-  BrainCircuit,
-  Boxes,
-  Award,
-} from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDashboardMetrics } from "@/lib/api/analytics";
-import { aiApi } from "@/lib/api/ai";
-import { Button } from "@/components/ui/button";
-import { ProphetChart } from "@/components/dashboard/ProphetChart";
-import { toast } from "sonner";
-
-export default function DashboardPage() {
-  const queryClient = useQueryClient();
-
-  // 1. Dashboard Sales Metrics
-  const { data: metrics, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ["dashboardMetrics"],
-    queryFn: getDashboardMetrics,
-    staleTime: 60 * 1000,
-  });
-
-  // 2. AHP Supplier Recommendations
-  const { data: ahpSuppliers, isLoading: isLoadingAhp } = useQuery({
-    queryKey: ["ahpRecommendations"],
-    queryFn: aiApi.getAhpRecommendations,
-    staleTime: 30 * 1000,
-  });
-
-  // 3. Prophet Stock Predictions
-  const { data: prophetPredictions, isLoading: isLoadingProphet } = useQuery({
-    queryKey: ["prophetPredictions"],
-    queryFn: aiApi.getProphetPredictions,
-    staleTime: 30 * 1000,
-  });
-
-  // Mutations
-  const ahpMutation = useMutation({
-    mutationFn: aiApi.triggerAhpCalculation,
-    onSuccess: (res) => {
-      toast.success(res.message || "Tugas AHP dikirimkan ke Redis Queue!");
-      queryClient.invalidateQueries({ queryKey: ["ahpRecommendations"] });
-    },
-    onError: (err: any) => {
-      toast.error("Gagal memicu AHP: " + (err.response?.data?.message || err.message));
-    },
-  });
-
-  const prophetMutation = useMutation({
-    mutationFn: aiApi.triggerProphetPrediction,
-    onSuccess: (res) => {
-      toast.success(res.message || "Tugas Prophet Forecasting dikirimkan ke Redis Queue!");
-      queryClient.invalidateQueries({ queryKey: ["prophetPredictions"] });
-    },
-    onError: (err: any) => {
-      toast.error("Gagal memicu Prophet: " + (err.response?.data?.message || err.message));
-    },
-  });
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
+export default function LandingPage() {
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-12">
-      {/* HEADER HALAMAN */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            Overview Analitik
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-              <Sparkles className="h-3.5 w-3.5" /> AI Worker Active
-            </span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Pantau performa transaksi dan peramalan ML Prophet & DSS AHP secara realtime.
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-white dark:bg-slate-950 selection:bg-indigo-500/30">
+      {/* Navigation */}
+      <nav className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => prophetMutation.mutate()}
-            disabled={prophetMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 transition-all shadow-xs"
+          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-500/30">
+            P
+          </div>
+          <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
+            POSKY
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/login"
+            className="px-5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >
-            {prophetMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <BrainCircuit className="h-3.5 w-3.5" />
-            )}
-            Run Prophet AI
-          </button>
-
-          <button className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs transition-all">
-            <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-            Bulan Ini
-          </button>
+            Masuk
+          </Link>
+          <Link
+            href="/login"
+            className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md hover:shadow-xl hover:shadow-indigo-500/20 active:scale-95"
+          >
+            Coba Gratis
+          </Link>
         </div>
-      </div>
+      </nav>
 
-      {/* KARTU STATISTIK (Grid 4 Kolom) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Stat 1: Pendapatan */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Pendapatan</p>
-            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </div>
-          <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            {isLoadingMetrics ? "..." : formatCurrency(metrics?.revenue.total || 0)}
-          </p>
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            {metrics?.revenue?.growth && metrics.revenue.growth >= 0 ? (
-              <>
-                <ArrowUpRight className="h-3 w-3" />
-                <span className="font-tabular tabular-nums">+{metrics.revenue.growth}%</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownRight className="h-3 w-3 text-rose-500" />
-                <span className="font-tabular tabular-nums text-rose-500">
-                  {metrics?.revenue?.growth}%
-                </span>
-              </>
-            )}
-            <span className="text-slate-500">dari bulan lalu</span>
-          </div>
-        </div>
+      {/* Hero Section */}
+      <div className="relative pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-100/40 via-white to-white dark:from-indigo-900/20 dark:via-slate-950 dark:to-slate-950"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full -z-10"></div>
 
-        {/* Stat 2: Transaksi */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-              Transaksi Berhasil
-            </p>
-            <div className="h-8 w-8 rounded-full bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center">
-              <Package className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            </div>
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400 text-sm font-semibold mb-8 animate-in slide-in-from-bottom-4 duration-700 fade-in">
+            <Sparkles className="h-4 w-4" />
+            <span className="tracking-wide">AI-Powered POS System</span>
           </div>
-          <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            {isLoadingMetrics
-              ? "..."
-              : new Intl.NumberFormat("id-ID").format(metrics?.transactions.total || 0)}
-          </p>
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-            {metrics?.transactions?.growth && metrics.transactions.growth >= 0 ? (
-              <>
-                <ArrowUpRight className="h-3 w-3" />
-                <span className="font-tabular tabular-nums">+{metrics.transactions.growth}%</span>
-              </>
-            ) : (
-              <>
-                <ArrowDownRight className="h-3 w-3 text-rose-500" />
-                <span className="font-tabular tabular-nums text-rose-500">
-                  {metrics?.transactions?.growth}%
-                </span>
-              </>
-            )}
-            <span className="text-slate-500">dari bulan lalu</span>
-          </div>
-        </div>
 
-        {/* Stat 3: Pelanggan (RFM) */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Pelanggan Aktif</p>
-            <div className="h-8 w-8 rounded-full bg-sky-100 dark:bg-sky-950/60 flex items-center justify-center">
-              <Users className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-            </div>
-          </div>
-          <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            {isLoadingMetrics
-              ? "..."
-              : new Intl.NumberFormat("id-ID").format(metrics?.customers.total || 0)}
-          </p>
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-            <span>Total pelanggan tersimpan</span>
-          </div>
-        </div>
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8 animate-in slide-in-from-bottom-6 duration-700 delay-100 fade-in max-w-4xl mx-auto leading-[1.1]">
+            Kelola Bisnis Lebih Pintar dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">Kecerdasan Buatan</span>
+          </h1>
 
-        {/* Stat 4: Peringatan Stok */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Peringatan Stok</p>
-            <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
-          </div>
-          <p className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100 font-tabular tabular-nums">
-            {isLoadingMetrics ? "..." : metrics?.inventory.low_stock_count || 0}{" "}
-            <span className="text-sm font-normal text-slate-500 dark:text-slate-400">item</span>
+          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed animate-in slide-in-from-bottom-8 duration-700 delay-200 fade-in">
+            POSKY bukan sekadar kasir biasa. Dilengkapi dengan AI Prophet untuk prediksi stok dan DSS AHP untuk rekomendasi supplier terbaik bagi UMKM Anda.
           </p>
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-            <span>Segera lakukan restock</span>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in slide-in-from-bottom-10 duration-700 delay-300 fade-in">
+            <Link
+              href="/login"
+              className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              Mulai Sekarang <ArrowRight className="h-5 w-5" />
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* AREA GRAFIK & ANALISIS (Grid 3 Kolom di Desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Kolom Kiri (Makan 2 kolom): Grafik Sales Trend & Prophet */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card flex flex-col min-h-[400px]">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                Tren Penjualan 30 Hari
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Pergerakan omzet aktual hasil transaksi faktur toko
-              </p>
+      {/* Feature Grid */}
+      <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Feature 1 */}
+          <div className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+            <div className="h-14 w-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Store className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
             </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">Omnichannel POS</h3>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Dukung penjualan barang, jasa, hingga persewaan dalam satu sistem kasir modern yang intuitif.
+            </p>
           </div>
 
-          <div className="flex-1 w-full">
-            <ProphetChart trendData={metrics?.sales_trend || []} />
-          </div>
-        </div>
-
-        {/* Kolom Kanan (Makan 1 kolom): Peringkat Keputusan AHP (REAL DATA) */}
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-card flex flex-col justify-between min-h-[400px]">
-          <div>
-            <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  <Award className="h-4 w-4 text-amber-500" /> Rekomendasi Supplier (AHP)
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Peringkat berdasarkan matriks kriteria berbobot
-                </p>
-              </div>
+          {/* Feature 2 */}
+          <div className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+            <div className="h-14 w-14 rounded-2xl bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Bot className="h-7 w-7 text-cyan-600 dark:text-cyan-400" />
             </div>
-
-            {isLoadingAhp ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400">
-                <Loader2 className="h-6 w-6 animate-spin text-indigo-500 mb-2" />
-                <p className="text-xs">Memuat rekomendasi...</p>
-              </div>
-            ) : !ahpSuppliers || ahpSuppliers.length === 0 ? (
-              <div className="py-8 text-center space-y-2">
-                <p className="text-xs text-slate-400">Belum ada hasil kalkulasi AHP tersimpan.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {ahpSuppliers.slice(0, 4).map((supp, index) => (
-                  <div
-                    key={supp.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                      index === 0
-                        ? "border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/60 dark:bg-indigo-950/40"
-                        : "border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold font-tabular tabular-nums ${
-                          index === 0
-                            ? "bg-indigo-600 text-white"
-                            : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
-                        }`}
-                      >
-                        {supp.rank || index + 1}
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                          {supp.name}
-                        </p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-tabular tabular-nums">
-                          Skor: {Number(supp.ahp_score || 0).toFixed(4)}
-                        </p>
-                      </div>
-                    </div>
-                    {index === 0 && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-                        Terbaik
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">AI Forecasting</h3>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Prediksi kapan stok barang Anda akan habis secara otomatis menggunakan model Machine Learning Prophet.
+            </p>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => ahpMutation.mutate()}
-            disabled={ahpMutation.isPending}
-            variant="outline"
-            className="mt-4 w-full h-9 text-xs font-medium border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5"
-          >
-            {ahpMutation.isPending ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Menghitung...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-3.5 w-3.5" /> Hitung Ulang AHP
-              </>
-            )}
-          </Button>
+          {/* Feature 3 */}
+          <div className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <BarChart3 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">AHP Decision Support</h3>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Sistem pendukung keputusan untuk menentukan supplier terbaik berdasarkan berbagai kriteria bobot.
+            </p>
+          </div>
         </div>
-      </div>
-
-      {/* SECTION WIDGET PROPHET PREDIKSI STOK HABIS */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Boxes className="h-4 w-4 text-indigo-500" /> Prediksi Tanggal Stok Habis (Prophet
-              ML)
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Analisis deret waktu otomatis menentukan estimasi tanggal kehabisan stok & tingkat
-              Safety Stock aman.
-            </p>
-          </div>
-
-          <button
-            onClick={() => prophetMutation.mutate()}
-            disabled={prophetMutation.isPending}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-50"
-          >
-            {prophetMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <BrainCircuit className="h-3.5 w-3.5" />
-            )}
-            Jalankan Prediction Worker
-          </button>
-        </div>
-
-        {isLoadingProphet ? (
-          <div className="py-8 flex flex-col items-center justify-center text-slate-400">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-500 mb-2" />
-            <p className="text-xs">Memuat data prediksi stok Prophet...</p>
-          </div>
-        ) : !prophetPredictions || prophetPredictions.length === 0 ? (
-          <div className="py-8 text-center space-y-1">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Belum ada prediksi stok tersimpan.
-            </p>
-            <p className="text-[11px] text-slate-400">
-              Klik &quot;Jalankan Prediction Worker&quot; untuk mengekstraksi riwayat penjualan dan
-              menghitung estimasi stok habis.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {prophetPredictions.map((pred) => (
-              <div
-                key={pred.id}
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-2.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {pred.product?.name || "Produk ID " + pred.product_id.slice(0, 8)}
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      Sisa Stok Saat Ini:{" "}
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
-                        {pred.product?.stock ?? "-"} unit
-                      </span>
-                    </p>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                    Confidence {Number(pred.confidence_score) <= 1 ? (Number(pred.confidence_score) * 100).toFixed(0) : Number(pred.confidence_score).toFixed(0)}%
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px]">
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Estimasi Habis:</span>
-                    <span className="font-bold text-rose-600 dark:text-rose-400">
-                      {formatDate(pred.estimated_stockout_date)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px]">Safety Stock:</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      {pred.safety_stock_level} unit
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
