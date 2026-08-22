@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { authApi } from "@/lib/api/auth";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -51,6 +52,9 @@ export default function LoginPage() {
     mutationFn: authApi.login,
     onSuccess: (response) => {
       setAuth(response.data.user, response.data.token);
+      toast.success(`Selamat datang kembali, ${response.data.user.name}!`, {
+        description: "Berhasil masuk ke sistem POSKY.",
+      });
       router.push("/dashboard");
     },
     onError: (error: any) => {
@@ -59,6 +63,7 @@ export default function LoginPage() {
         error.message ||
         "Terjadi kesalahan saat login. Coba lagi.";
       setErrorMessage(message);
+      toast.error("Gagal Masuk", { description: message });
       console.error("Detail Error Login:", error);
     },
   });

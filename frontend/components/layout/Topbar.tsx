@@ -5,6 +5,8 @@ import { Bell, Search, User, Menu, LogOut, Sun, Moon, Store, Sparkles, ShoppingB
 import { useAuthStore } from "@/store/useAuthStore";
 import { authApi } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
   const router = useRouter();
@@ -36,14 +38,19 @@ export function Topbar({ onMenuToggle }: { onMenuToggle: () => void }) {
     }
   };
 
+  const queryClient = useQueryClient();
+
   const handleLogout = async () => {
     try {
       await authApi.logout();
+      toast.success("Berhasil Logout", { description: "Sesi Anda telah diakhiri dengan aman." });
     } catch (err) {
       console.warn("Backend logout warning:", err);
+      toast.success("Berhasil Keluar (Sesi Lokal)");
     } finally {
       logout();
-      window.location.href = "/login?clear_session=true";
+      queryClient.clear();
+      router.push("/login");
     }
   };
 
