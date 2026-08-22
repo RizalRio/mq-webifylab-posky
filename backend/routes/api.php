@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\ProphetController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\UserController;
 
 // Public Routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -47,38 +48,47 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
     Route::apiResource('stock-logs', StockLogController::class)->only(['index', 'store']);
 
-    // DSS AHP Master Data
-    Route::apiResource('suppliers', SupplierController::class);
-    Route::apiResource('criteria', CriterionController::class);
+    // Admin & Manager Only Routes
+    Route::middleware('role:admin,manajer')->group(function () {
+        // Store & POS Settings
+        Route::get('/settings', [SettingController::class, 'show']);
+        Route::put('/settings', [SettingController::class, 'update']);
 
-    // DSS AHP Routes
-    Route::post('ahp/calculate', [AhpController::class, 'triggerCalculation']);
-    Route::get('ahp/recommendations', [AhpController::class, 'recommendations']);
+        // DSS AHP Master Data
+        Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('criteria', CriterionController::class);
 
-    // Prophet Routes
-    Route::post('prophet/predict', [ProphetController::class, 'triggerPrediction']);
-    Route::get('prophet/predictions', [ProphetController::class, 'predictions']);
+        // DSS AHP Routes
+        Route::post('ahp/calculate', [AhpController::class, 'triggerCalculation']);
+        Route::get('ahp/recommendations', [AhpController::class, 'recommendations']);
 
-    // DSS AHP Matrix & Evaluation Data (Bulk Operations)
-    Route::get('criterion-comparisons', [CriterionComparisonController::class, 'index']);
-    Route::post('criterion-comparisons/bulk', [CriterionComparisonController::class, 'storeBulk']);
+        // Prophet Routes
+        Route::post('prophet/predict', [ProphetController::class, 'triggerPrediction']);
+        Route::get('prophet/predictions', [ProphetController::class, 'predictions']);
 
-    Route::get('supplier-evaluations', [SupplierEvaluationController::class, 'index']);
-    Route::post('supplier-evaluations/bulk', [SupplierEvaluationController::class, 'storeBulk']);
+        // DSS AHP Matrix & Evaluation Data
+        Route::get('criterion-comparisons', [CriterionComparisonController::class, 'index']);
+        Route::post('criterion-comparisons/bulk', [CriterionComparisonController::class, 'storeBulk']);
 
-    // DSS AHP Trigger
-    Route::post('ahp/calculate', [AhpController::class, 'triggerCalculation']);
+        Route::get('supplier-evaluations', [SupplierEvaluationController::class, 'index']);
+        Route::post('supplier-evaluations/bulk', [SupplierEvaluationController::class, 'storeBulk']);
 
-    // Analytics & Reports
-    Route::prefix('reports')->group(function () {
-        Route::get('/sales', [ReportController::class, 'sales']);
-        Route::get('/items', [ReportController::class, 'items']);
-        Route::get('/export-pdf', [ReportController::class, 'exportPdf']);
+        // Analytics & Reports
+        Route::prefix('reports')->group(function () {
+            Route::get('/sales', [ReportController::class, 'sales']);
+            Route::get('/items', [ReportController::class, 'items']);
+            Route::get('/export-pdf', [ReportController::class, 'exportPdf']);
+        });
+
+        Route::prefix('analytics')->group(function () {
+            Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
+            Route::get('/rfm', [AnalyticsController::class, 'rfm']);
+            Route::get('/cohort', [AnalyticsController::class, 'cohort']);
+        });
     });
 
-    Route::prefix('analytics')->group(function () {
-        Route::get('/dashboard', [AnalyticsController::class, 'dashboard']);
-        Route::get('/rfm', [AnalyticsController::class, 'rfm']);
-        Route::get('/cohort', [AnalyticsController::class, 'cohort']);
+    // Admin Only Routes
+    Route::middleware('role:admin')->group(function () {
+        Route::apiResource('users', UserController::class);
     });
 });

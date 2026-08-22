@@ -25,7 +25,7 @@
 * [x] Testing & Documentation (Integration Tests for AI Workers)
 * [x] Frontend (Dashboard, Routing, Autentikasi)
 * [x] Frontend (Integrasi UI DSS Supplier / AHP)
-* [ ] Frontend (Modul Katalog, Kasir, dan Analitik Lainnya)
+* [x] Frontend (Modul Katalog, Kasir, dan Analitik Lainnya)
 * [ ] Mobile App (Flutter/Riverpod)
 
 ---

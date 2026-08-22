@@ -1,21 +1,54 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Topbar } from "./Topbar";
 import { Sidebar } from "./Sidebar";
+import { useAuthStore } from "@/store/useAuthStore";
+import { toast } from "sonner";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuthStore();
 
   // Cek apakah ini halaman autentikasi atau landing page
   const isAuthPage = pathname === "/login" || pathname === "/register";
   const isLandingPage = pathname === "/";
 
+  // Route Protection Logic
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [pathname]);
+
+    if (user && !isAuthPage && !isLandingPage) {
+      const role = (user.role || "").toLowerCase();
+      
+      // Aturan Kasir
+      if (role === "kasir") {
+        const kasirAllowedRoutes = ["/pos", "/transaksi", "/katalog", "/stok", "/pelanggan"];
+        const isAllowed = kasirAllowedRoutes.some(r => pathname === r || pathname.startsWith(r + "/"));
+        if (!isAllowed) {
+          toast.error("Akses Ditolak. Kasir tidak memiliki akses ke halaman ini.");
+          router.replace("/pos");
+        }
+      }
+
+      // Aturan Manajer
+      if (role === "manajer") {
+        if (pathname.startsWith("/pos") || pathname.startsWith("/user")) {
+          toast.error("Akses Ditolak. Manajer tidak memiliki akses ke halaman ini.");
+          router.replace("/dashboard");
+        }
+      }
+
+      // Aturan Pengaturan Pengguna (Hanya Admin)
+      if (role !== "admin" && pathname.startsWith("/user")) {
+        toast.error("Akses Ditolak. Hanya Admin yang dapat mengelola karyawan.");
+        router.replace("/dashboard");
+      }
+    }
+  }, [pathname, user, router, isAuthPage, isLandingPage]);
 
   // Jika ini halaman Landing Page, tampilkan tanpa padding dan flex centering
   if (isLandingPage) {

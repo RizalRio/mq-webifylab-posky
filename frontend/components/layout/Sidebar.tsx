@@ -55,6 +55,8 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
   const { user } = useAuthStore();
 
   const roleUpper = (user?.role || "").toString().toUpperCase();
+  const isAdmin = roleUpper === "ADMIN";
+  const isManager = roleUpper === "MANAJER" || roleUpper === "MANAGER";
   const isCashier = roleUpper === "KASIR" || roleUpper === "CASHIER";
 
   // State untuk melacak sub-menu mana yang terbuka
@@ -162,31 +164,59 @@ export function Sidebar({ isMobileOpen, onClose }: SidebarProps) {
           href: "/pengaturan",
           icon: Settings,
         },
+        ...(isAdmin
+          ? [
+              {
+                label: "Manajemen Karyawan",
+                href: "/user",
+                icon: Users,
+              },
+            ]
+          : []),
       ],
     },
   ];
 
-  // Filter navSections jika user adalah Kasir
+  // Filter navSections berdasarkan Role
   const filteredNavSections = navSections
     .map((section) => {
-      if (!isCashier) return section;
+      if (isAdmin) return section;
 
-      // Kasir hanya melihat POS, Riwayat Transaksi, dan Katalog Produk
-      const filteredItems = section.items
-        .map((item) => {
-          if (!item.children) {
-            return item.href === "/pos" || item.href === "/transaksi" || item.href === "/katalog"
-              ? item
-              : null;
-          }
-          const validChildren = item.children.filter(
-            (c) => c.href === "/pos" || c.href === "/transaksi" || c.href === "/katalog"
-          );
-          return validChildren.length > 0 ? { ...item, children: validChildren } : null;
-        })
-        .filter(Boolean) as NavItem[];
+      if (isCashier) {
+        // Kasir hanya melihat POS, Riwayat Transaksi, Katalog Produk, dan Riwayat & Mutasi Stok
+        const filteredItems = section.items
+          .map((item) => {
+            if (!item.children) {
+              return item.href === "/pos" || item.href === "/transaksi" || item.href === "/katalog" || item.href === "/stok"
+                ? item
+                : null;
+            }
+            const validChildren = item.children.filter(
+              (c) => c.href === "/pos" || c.href === "/transaksi" || c.href === "/katalog" || c.href === "/stok"
+            );
+            return validChildren.length > 0 ? { ...item, children: validChildren } : null;
+          })
+          .filter(Boolean) as NavItem[];
 
-      return filteredItems.length > 0 ? { ...section, items: filteredItems } : null;
+        return filteredItems.length > 0 ? { ...section, items: filteredItems } : null;
+      }
+
+      if (isManager) {
+        // Manajer melihat semua kecuali Kasir (POS) dan Pengaturan Karyawan (sudah dihandle karena isAdmin false)
+        const filteredItems = section.items
+          .map((item) => {
+            if (!item.children) {
+              return item.href === "/pos" ? null : item;
+            }
+            const validChildren = item.children.filter((c) => c.href !== "/pos");
+            return validChildren.length > 0 ? { ...item, children: validChildren } : null;
+          })
+          .filter(Boolean) as NavItem[];
+
+        return filteredItems.length > 0 ? { ...section, items: filteredItems } : null;
+      }
+
+      return section;
     })
     .filter(Boolean) as NavSection[];
   useEffect(() => {
